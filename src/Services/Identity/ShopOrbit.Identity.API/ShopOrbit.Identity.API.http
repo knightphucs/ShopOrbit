@@ -1,0 +1,6 @@
+@ShopOrbit.Identity.API_HostAddress = http://localhost:5177
+
+GET {{ShopOrbit.Identity.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

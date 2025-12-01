@@ -1,0 +1,72 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Identity API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Services/Identity/ShopOrbit.Identity.API/bin/Debug/net8.0/ShopOrbit.Identity.API.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Services/Identity/ShopOrbit.Identity.API",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5051"
+      }
+    },
+    {
+      "name": "Catalog API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Services/Catalog/ShopOrbit.Catalog.API/bin/Debug/net8.0/ShopOrbit.Catalog.API.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Services/Catalog/ShopOrbit.Catalog.API",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5052"
+      }
+    },
+    {
+      "name": "Ordering API",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Services/Ordering/ShopOrbit.Ordering.API/bin/Debug/net8.0/ShopOrbit.Ordering.API.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Services/Ordering/ShopOrbit.Ordering.API",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5053"
+      }
+    },
+    {
+      "name": "Gateway",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${workspaceFolder}/src/Gateways/ShopOrbit.Gateway/bin/Debug/net8.0/ShopOrbit.Gateway.dll",
+      "args": [],
+      "cwd": "${workspaceFolder}/src/Gateways/ShopOrbit.Gateway",
+      "stopAtEntry": false,
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_URLS": "http://localhost:5000"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run All Services",
+      "configurations": [
+        "Identity API",
+        "Catalog API",
+        "Ordering API",
+        "Gateway"
+      ]
+    }
+  ]
+}

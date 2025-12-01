@@ -1,0 +1,34 @@
+services:
+  # 1. Database chính (PostgreSQL)
+  shoporbit-db:
+    image: postgres:17
+    container_name: shoporbit-postgres
+    environment:
+      - POSTGRES_DB=shoporbit_db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=Password123!
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Distributed Cache (Redis)
+  shoporbit-redis:
+    image: redis:alpine
+    container_name: shoporbit-redis
+    ports:
+      - "6379:6379"
+
+  # 3. Message Broker (RabbitMQ)
+  shoporbit-rabbitmq:
+    image: rabbitmq:management
+    container_name: shoporbit-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672" # Port giao tiếp ứng dụng
+      - "15672:15672" # Port trang quản trị UI (Management UI)
+
+volumes:
+  postgres_data:
