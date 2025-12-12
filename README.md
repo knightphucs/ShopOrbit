@@ -52,9 +52,10 @@ docker-compose up -d
 ### 3. Add-Migrations
 
 ```bash
-dotnet ef migrations add <MigrationName> --project src/Services/Identity/ShopOrbit.Identity.API/ShopOrbit.Identity.API.csproj
-dotnet ef migrations add <MigrationName> --project src/Services/Catalog/ShopOrbit.Catalog.API/ShopOrbit.Catalog.API.csproj
-dotnet ef migrations add <MigrationName> --project src/Services/Ordering/ShopOrbit.Ordering.API/ShopOrbit.Ordering.API.csproj
+dotnet ef migrations add InitialCreate --project src/Services/Identity/ShopOrbit.Identity.API/ShopOrbit.Identity.API.csproj
+dotnet ef migrations add InitialCreate --project src/Services/Catalog/ShopOrbit.Catalog.API/ShopOrbit.Catalog.API.csproj
+dotnet ef migrations add InitialCreate --project src/Services/Ordering/ShopOrbit.Ordering.API/ShopOrbit.Ordering.API.csproj
+dotnet ef migrations add InitialCreate --project src/Services/Payment/ShopOrbit.Payments.API/ShopOrbit.Payments.API.csproj
 
 # Identity Service
 dotnet ef database update --project src/Services/Identity/ShopOrbit.Identity.API
@@ -64,11 +65,15 @@ dotnet ef database update --project src/Services/Catalog/ShopOrbit.Catalog.API
 
 # Ordering Service
 dotnet ef database update --project src/Services/Ordering/ShopOrbit.Ordering.API
+
+# Payment Service
+dotnet ef database update --project src/Services/Payment/ShopOrbit.Payments.API
 ```
 
 ### 4. Run all services
 
 ```bash
 ./start-all.ps1
-```
 
+All services has deployed to Docker -> just run "docker-compose up -d"
+```

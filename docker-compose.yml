@@ -1,5 +1,5 @@
 services:
-  # 1. Database chính (PostgreSQL)
+  # 1. Database (PostgreSQL)
   shoporbit-db:
     image: postgres:17
     container_name: shoporbit-postgres
@@ -11,6 +11,11 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d shoporbit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # 2. Distributed Cache (Redis)
   shoporbit-redis:
@@ -18,6 +23,11 @@ services:
     container_name: shoporbit-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
 
   # 3. Message Broker (RabbitMQ)
   shoporbit-rabbitmq:
@@ -27,8 +37,137 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     ports:
-      - "5672:5672" # Port giao tiếp ứng dụng
-      - "15672:15672" # Port trang quản trị UI (Management UI)
+      - "5672:5672" # Port for messaging
+      - "15672:15672" # Port Management UI
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # --- MICROSERVICES ---
+
+  # 1. Identity Service
+  identity-api:
+    build:
+      context: .
+      dockerfile: src/Services/Identity/ShopOrbit.Identity.API/Dockerfile
+    container_name: identity-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_identity_db;Username=admin;Password=Password123!
+      - JwtSettings__Issuer=ShopOrbitIdentity
+      - JwtSettings__Audience=ShopOrbitClient
+    depends_on:
+      shoporbit-db:
+        condition: service_healthy
+    ports:
+      - "5051:8080"
+
+  # 2. Catalog Service
+  catalog-api:
+    build:
+      context: .
+      dockerfile: src/Services/Catalog/ShopOrbit.Catalog.API/Dockerfile
+    container_name: catalog-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_catalog_db;Username=admin;Password=Password123!
+      - ConnectionStrings__RedisConnection=shoporbit-redis:6379
+      - RabbitMq__Host=shoporbit-rabbitmq
+      - RabbitMq__UserName=guest
+      - RabbitMq__Password=guest
+      - JwtSettings__Issuer=ShopOrbitIdentity
+      - JwtSettings__Audience=ShopOrbitClient
+    depends_on:
+      shoporbit-db:
+        condition: service_healthy
+      shoporbit-redis:
+        condition: service_healthy
+      shoporbit-rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5052:8080"
+
+  # 3. Ordering Service
+  ordering-api:
+    build:
+      context: .
+      dockerfile: src/Services/Ordering/ShopOrbit.Ordering.API/Dockerfile
+    container_name: ordering-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_ordering_db;Username=admin;Password=Password123!
+      - ConnectionStrings__RedisConnection=shoporbit-redis:6379
+      - RabbitMq__Host=shoporbit-rabbitmq
+      - RabbitMq__UserName=guest
+      - RabbitMq__Password=guest
+      - JwtSettings__Issuer=ShopOrbitIdentity
+      - JwtSettings__Audience=ShopOrbitClient
+    depends_on:
+      shoporbit-db:
+        condition: service_healthy
+      shoporbit-redis:
+        condition: service_healthy
+      shoporbit-rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5053:8080"
+
+  # 4. Payment Service
+  payment-api:
+    build:
+      context: .
+      dockerfile: src/Services/Payment/ShopOrbit.Payments.API/Dockerfile
+    container_name: payment-api
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_payment_db;Username=admin;Password=Password123!
+      - ConnectionStrings__RedisConnection=shoporbit-redis:6379
+      - RabbitMq__Host=shoporbit-rabbitmq
+      - RabbitMq__UserName=guest
+      - RabbitMq__Password=guest
+    depends_on:
+      shoporbit-db:
+        condition: service_healthy
+      shoporbit-redis:
+        condition: service_healthy
+      shoporbit-rabbitmq:
+        condition: service_healthy
+    ports:
+      - "5054:8080"
+
+  # 5. Basket Service
+  basket-api:
+    build:
+      context: .
+      dockerfile: src/Services/Basket/ShopOrbit.Basket.API/Dockerfile
+    container_name: basket-api
+    environment:
+      - CacheSettings__ConnectionString=shoporbit-redis:6379
+      - JwtSettings__Issuer=ShopOrbitIdentity
+      - JwtSettings__Audience=ShopOrbitClient
+    depends_on:
+      - shoporbit-redis
+    ports:
+      - "5055:8080"
+
+  # 6. API Gateway (YARP)
+  api-gateway:
+    build:
+      context: .
+      dockerfile: src/Gateways/ShopOrbit.Gateway/Dockerfile
+    container_name: api-gateway
+    environment:
+      - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-api:8080
+      - ReverseProxy__Clusters__catalog-cluster__Destinations__destination1__Address=http://catalog-api:8080
+      - ReverseProxy__Clusters__ordering-cluster__Destinations__destination1__Address=http://ordering-api:8080
+      - ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address=http://payment-api:8080
+      - ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address=http://basket-api:8080
+    depends_on:
+      - identity-api
+      - catalog-api
+      - ordering-api
+      - payment-api
+      - basket-api
+    ports:
+      - "5000:8080"
 
 volumes:
   postgres_data:

@@ -25,3 +25,32 @@ Hệ thống định nghĩa 3 Roles chính:
 | Catalog  | PUT    | /api/products/{id} | Admin, Staff  | Cập nhật giá/kho    |
 | Ordering | GET    | /api/orders        | Admin, Staff  | Xem tất cả đơn hàng |
 | Ordering | POST   | /api/orders        | User          | Đặt hàng            |
+
+## 4. Implementation Details (Update)
+
+Chi tiết triển khai bảo mật trong code (Authentication & Authorization):
+
+### JWT Configuration
+
+- **Middleware:** `Microsoft.AspNetCore.Authentication.JwtBearer`.
+- **Secret Key:** Đọc từ biến môi trường `JwtSettings__Secret` (trong Docker Compose).
+- **Claims:** Hệ thống phụ thuộc vào claim `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier` để định danh User ID (GUID).
+
+### Secure Basket Flow (Basket Service)
+
+- **Attribute:** `[Authorize]` trên `BasketController`.
+- **Logic:**
+  - API **không nhận** tham số `userName` từ URL hay Body để tránh IDOR.
+  - Code tự động trích xuất `UserId` từ Token Context:
+    ```csharp
+    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+    ```
+  - Dùng `userId` này để truy xuất Redis.
+
+### Secure Order Flow (Ordering Service)
+
+- **Attribute:** `[Authorize]` trên `OrdersController`.
+- **Logic:**
+  - Client gửi Request Body rỗng (hoặc chỉ chứa address).
+  - Server lấy `UserId` từ Token -> Tự động query sang Redis để lấy Items.
+  - Ngăn chặn việc Client giả mạo đơn giá hoặc số lượng sản phẩm.
