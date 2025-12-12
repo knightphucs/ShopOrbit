@@ -1,7 +1,7 @@
 # start-all.ps1
 
-Write-Host "Starting Infrastructure..." -ForegroundColor Green
-docker-compose up -d
+# Write-Host "Starting Infrastructure..." -ForegroundColor Green
+# docker-compose up -d
 
 Write-Host "Starting Identity Service..." -ForegroundColor Cyan
 Start-Process dotnet -ArgumentList "run --project src/Services/Identity/ShopOrbit.Identity.API/ShopOrbit.Identity.API.csproj --urls http://localhost:5051"
