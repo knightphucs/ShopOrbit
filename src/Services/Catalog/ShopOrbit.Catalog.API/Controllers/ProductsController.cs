@@ -42,7 +42,7 @@ public class ProductsController : ControllerBase
         }
 
         // B. Query Database
-        var query = _context.Products.AsQueryable();
+        var query = _context.Products.Include(p => p.Category).AsQueryable();
 
         // -- Filtering --
         if (!string.IsNullOrEmpty(spec.Search))
@@ -54,6 +54,8 @@ public class ProductsController : ControllerBase
         if (spec.MaxPrice.HasValue)
             query = query.Where(p => p.Price <= spec.MaxPrice);
 
+        if (spec.CategoryId.HasValue)
+            query = query.Where(p => p.CategoryId == spec.CategoryId);
         // -- Sorting --
         query = spec.Sort switch
         {
@@ -67,7 +69,12 @@ public class ProductsController : ControllerBase
         var items = await query
             .Skip((spec.PageIndex - 1) * spec.PageSize)
             .Take(spec.PageSize)
-            .Select(p => new ProductDto(p.Id, p.Name, p.Price)) // Map Entity -> DTO
+            .Select(p => new ProductDto(
+                p.Id,
+                p.Name,
+                p.Price,
+                p.Category!.Name
+            )) // Map Entity -> DTO
             .ToListAsync();
 
         var result = new PagedResult<ProductDto>(items, totalCount, spec.PageIndex, spec.PageSize);
@@ -98,16 +105,28 @@ public class ProductsController : ControllerBase
         var cachedData = await _cache.GetStringAsync(cacheKey);
         if (!string.IsNullOrEmpty(cachedData))
         {
-            return Ok(JsonSerializer.Deserialize<Product>(cachedData));
+            return Ok(JsonSerializer.Deserialize<ProductDto>(cachedData));
         }
 
-        var product = await _context.Products.FindAsync(id);
+        var product = await _context.Products
+            .Include(p => p.Category)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (product == null) return NotFound();
 
-        var options = new DistributedCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
-        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(product), options);
+        var dto = new ProductDto(
+            product.Id,
+            product.Name,
+            product.Price,
+            product.Category!.Name
+        );
 
-        return Ok(product);
+        var options = new DistributedCacheEntryOptions()
+            .SetAbsoluteExpiration(TimeSpan.FromMinutes(10));
+
+        await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(dto), options);
+
+        return Ok(dto);
     }
 
     // ==========================================
@@ -171,7 +190,7 @@ public class ProductsController : ControllerBase
     // ==========================================
     private string GenerateCacheKeyFromParams(ProductSpecParams spec)
     {
-        return $"catalog:products:p{spec.PageIndex}_s{spec.PageSize}_q{spec.Search}_min{spec.MinPrice}_max{spec.MaxPrice}_sort{spec.Sort}";
+        return $"catalog:products:p{spec.PageIndex}_s{spec.PageSize}_q{spec.Search}_cat{spec.CategoryId}_min{spec.MinPrice}_max{spec.MaxPrice}_sort{spec.Sort}";
     }
 
     private void SetETag(string content)
@@ -197,4 +216,4 @@ public class ProductsController : ControllerBase
     }
 }
 
-public record ProductDto(Guid Id, string Name, decimal Price);
+public record ProductDto(Guid Id, string Name, decimal Price, string CategoryName);
