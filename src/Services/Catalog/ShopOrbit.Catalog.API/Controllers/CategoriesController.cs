@@ -24,9 +24,7 @@ public class CategoriesController : ControllerBase
         _cache = cache;
     }
 
-    // ============================================================
-    // GET ALL — Pagination + Filter + Sort + Cache + ETag
-    // ============================================================
+    // GET ALL
     [HttpGet]
     [Authorize(Roles = "Admin,Staff,User")]
     public async Task<IActionResult> GetCategories([FromQuery] CategorySpecParams spec)
@@ -83,9 +81,7 @@ public class CategoriesController : ControllerBase
         return Ok(result);
     }
 
-    // ============================================================
-    // GET BY ID — Cache Detail
-    // ============================================================
+    // GET BY ID
     [HttpGet("{id}")]
     [Authorize(Roles = "Admin,Staff,User")]
     public async Task<IActionResult> GetCategoryById(Guid id)
@@ -105,9 +101,7 @@ public class CategoriesController : ControllerBase
         return Ok(category);
     }
 
-    // ============================================================
     // CREATE — Admin only
-    // ============================================================
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateCategory([FromBody] Category category)
@@ -121,9 +115,7 @@ public class CategoriesController : ControllerBase
         return CreatedAtAction(nameof(GetCategoryById), new { id = category.Id }, category);
     }
 
-    // ============================================================
-    // UPDATE — Admin only
-    // ============================================================
+    // UPDATE 
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateCategory(Guid id, [FromBody] Category update)
@@ -143,9 +135,7 @@ public class CategoriesController : ControllerBase
         return NoContent();
     }
 
-    // ============================================================
     // DELETE — Admin only + Prevent delete if referenced in Products
-    // ============================================================
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteCategory(Guid id)
@@ -165,10 +155,7 @@ public class CategoriesController : ControllerBase
         return NoContent();
     }
 
-
-    // ============================================================
     // Helpers
-    // ============================================================
     private string GenerateCacheKeyFromParams(CategorySpecParams spec)
     {
         return $"catalog:categories:p{spec.PageIndex}_s{spec.PageSize}_q{spec.Search}_sort{spec.Sort}";
