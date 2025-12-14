@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore; // Nhớ thêm dòng này để query DB
+using Microsoft.EntityFrameworkCore; 
 using ShopOrbit.Catalog.API.Data;
 using ShopOrbit.Catalog.API.Models;
 using ShopOrbit.Catalog.API.DTOs;
@@ -24,9 +24,7 @@ public class ProductsController : ControllerBase
         _context = context;
     }
 
-    // ==========================================
-    // GET ALL (Pagination, Filter, Cache)
-    // ==========================================
+    // GET ALL 
     [HttpGet]
     [Authorize(Roles = "Admin,Staff,User")]
     public async Task<IActionResult> GetProducts([FromQuery] ProductSpecParams spec)
@@ -93,9 +91,7 @@ public class ProductsController : ControllerBase
         return Ok(result);
     }
 
-    // ==========================================
-    // GET BY ID (Detail)
-    // ==========================================
+    // GET BY ID
     [HttpGet("{id}")]
     [Authorize(Roles = "Admin,Staff,User")]
     public async Task<IActionResult> GetProductById(Guid id)
@@ -129,9 +125,7 @@ public class ProductsController : ControllerBase
         return Ok(dto);
     }
 
-    // ==========================================
-    // CREATE (Admin Only)
-    // ==========================================
+    // CREATE
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateProduct([FromBody] Product product)
@@ -143,9 +137,7 @@ public class ProductsController : ControllerBase
         return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
     }
 
-    // ==========================================
-    // UPDATE (Admin Only)
-    // ==========================================
+    // UPDATE
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] Product productUpdate)
@@ -166,9 +158,7 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
-    // ==========================================
     // DELETE (Admin Only)
-    // ==========================================
     [HttpDelete("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteProduct(Guid id)
@@ -181,13 +171,11 @@ public class ProductsController : ControllerBase
 
         // Invalidation
         await _cache.RemoveAsync($"catalog:product:{id}");
-
+    
         return NoContent();
     }
 
-    // ==========================================
     // HELPERS
-    // ==========================================
     private string GenerateCacheKeyFromParams(ProductSpecParams spec)
     {
         return $"catalog:products:p{spec.PageIndex}_s{spec.PageSize}_q{spec.Search}_cat{spec.CategoryId}_min{spec.MinPrice}_max{spec.MaxPrice}_sort{spec.Sort}";
