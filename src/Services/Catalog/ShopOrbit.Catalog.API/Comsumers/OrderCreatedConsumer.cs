@@ -1,4 +1,5 @@
 using MassTransit;
+using Microsoft.EntityFrameworkCore;
 using ShopOrbit.BuildingBlocks.Contracts;
 using ShopOrbit.Catalog.API.Data;
 using ShopOrbit.Catalog.API.Models;
@@ -19,24 +20,47 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
     public async Task Consume(ConsumeContext<OrderCreatedEvent> context)
     {
         var message = context.Message;
-        _logger.LogInformation($"[RabbitMQ] Received Order Created: {message.OrderId} - Amount: {message.TotalAmount}");
+        _logger.LogInformation($"[Catalog] Checking stock for Order: {message.OrderId}");
+
+        var productIds = message.OrderItems.Select(x => x.ProductId).ToList();
+        
+        var products = await _dbContext.Products
+            .Where(p => productIds.Contains(p.Id))
+            .ToListAsync();
+
+        var outOfStockItems = new List<Guid>();
 
         foreach (var item in message.OrderItems)
         {
-            var product = await _dbContext.Products.FindAsync(item.ProductId);
-            if (product != null)
+            var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+            
+            if (product == null || product.StockQuantity < item.Quantity)
             {
-                product.StockQuantity -= item.Quantity;
-                _logger.LogInformation($"[Updated stock for Product {product.Id}: New Stock = {product.StockQuantity}");
-
-                if (product.StockQuantity < 0)
-                {
-                    _logger.LogWarning($"[Stock Warning] Product {product.Id} is out of stock!");
-                }
+                outOfStockItems.Add(item.ProductId);
             }
         }
-        
-        await _dbContext.SaveChangesAsync();
-        _logger.LogInformation($"Finished processing Order Created: {message.OrderId}");
+
+        if (outOfStockItems.Count != 0)
+        {
+            _logger.LogWarning($"[Stock Failure] Order {message.OrderId} failed due to insufficient stock.");
+
+            await context.Publish(new StockReservationFailedEvent
+            {
+                OrderId = message.OrderId,
+                Reason = "Insufficient stock for items: " + string.Join(", ", outOfStockItems),
+                FailedItemIds = outOfStockItems
+            });
+            
+            return; 
+        }
+
+        foreach (var item in message.OrderItems)
+        {
+            var product = products.First(p => p.Id == item.ProductId);
+            product.StockQuantity -= item.Quantity;
+            _logger.LogInformation($"Reserved {item.Quantity} of {product.Name}. New Stock: {product.StockQuantity}");
+        }
+
+        _logger.LogInformation($"[Catalog] Stock reserved successfully for Order {message.OrderId}");
     }
 }

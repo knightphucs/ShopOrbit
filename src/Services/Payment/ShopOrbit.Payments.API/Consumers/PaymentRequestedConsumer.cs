@@ -63,7 +63,24 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
         };
 
         _dbContext.Payments.Add(payment);
-        await _dbContext.SaveChangesAsync();
+
+        if (isSuccess)
+        {
+            await context.Publish(new PaymentSucceededEvent
+            {
+                OrderId = message.OrderId,
+                PaymentId = payment.Id,
+                ProcessedAt = DateTime.UtcNow
+            });
+        }
+        else
+        {
+            await context.Publish(new PaymentFailedEvent
+            {
+                OrderId = message.OrderId,
+                Reason = payment.FailureReason!
+            });
+        }
 
         await _cache.SetStringAsync(
             key,
@@ -77,23 +94,5 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
             "[Payment Service] Processed Payment {PaymentId}",
             payment.Id
         );
-
-        if (isSuccess)
-        {
-            await _publishEndpoint.Publish(new PaymentSucceededEvent
-            {
-                OrderId = message.OrderId,
-                PaymentId = payment.Id,
-                ProcessedAt = DateTime.UtcNow
-            });
-        }
-        else
-        {
-            await _publishEndpoint.Publish(new PaymentFailedEvent
-            {
-                OrderId = message.OrderId,
-                Reason = payment.FailureReason!
-            });
-        }
     }
 }

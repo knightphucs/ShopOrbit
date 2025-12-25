@@ -18,8 +18,6 @@ public class OrderTimeoutConsumer : IConsumer<OrderTimeoutEvent>
     
     public async Task Consume(ConsumeContext<OrderTimeoutEvent> context)
     {
-        using var tx = await _dbContext.Database.BeginTransactionAsync();
-
         var order = await _dbContext.Orders
             .Include(o => o.Items)
             .FirstOrDefaultAsync(x => x.Id == context.Message.OrderId);
@@ -28,7 +26,6 @@ public class OrderTimeoutConsumer : IConsumer<OrderTimeoutEvent>
             return;
         
         order.Status = "Cancelled";
-        await _dbContext.SaveChangesAsync();
             
         await context.Publish(new OrderCancelledEvent 
         { 
@@ -39,7 +36,5 @@ public class OrderTimeoutConsumer : IConsumer<OrderTimeoutEvent>
                 Quantity = i.Quantity 
             }).ToList()
         });
-
-        await tx.CommitAsync();
     }
 }

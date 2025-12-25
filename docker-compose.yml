@@ -6,7 +6,7 @@ services:
     environment:
       - POSTGRES_DB=shoporbit_db
       - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=Password123!
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
@@ -37,8 +37,8 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     ports:
-      - "5672:5672" # Port for messaging
-      - "15672:15672" # Port Management UI
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running"]
       interval: 10s
@@ -54,7 +54,7 @@ services:
       dockerfile: src/Services/Identity/ShopOrbit.Identity.API/Dockerfile
     container_name: identity-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_identity_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_identity_db;Username=admin;Password=${DATABASE_PASSWORD}
       - JwtSettings__Issuer=ShopOrbitIdentity
       - JwtSettings__Audience=ShopOrbitClient
     depends_on:
@@ -70,7 +70,7 @@ services:
       dockerfile: src/Services/Catalog/ShopOrbit.Catalog.API/Dockerfile
     container_name: catalog-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_catalog_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_catalog_db;Username=admin;Password=${DATABASE_PASSWORD}
       - ConnectionStrings__RedisConnection=shoporbit-redis:6379
 
       - RabbitMq__Host=shoporbit-rabbitmq
@@ -101,7 +101,7 @@ services:
       dockerfile: src/Services/Ordering/ShopOrbit.Ordering.API/Dockerfile
     container_name: ordering-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_ordering_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_ordering_db;Username=admin;Password=${DATABASE_PASSWORD}
       - ConnectionStrings__RedisConnection=shoporbit-redis:6379
 
       - RabbitMq__Host=shoporbit-rabbitmq
@@ -129,7 +129,7 @@ services:
       dockerfile: src/Services/Payment/ShopOrbit.Payments.API/Dockerfile
     container_name: payment-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_payment_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_payment_db;Username=admin;Password=${DATABASE_PASSWORD}
       - ConnectionStrings__RedisConnection=shoporbit-redis:6379
       - RabbitMq__Host=shoporbit-rabbitmq
       - RabbitMq__UserName=guest

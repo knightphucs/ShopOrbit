@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ShopOrbit.Basket.API.Data;
@@ -6,8 +7,9 @@ using ShopOrbit.Basket.API.Models;
 
 namespace ShopOrbit.Basket.API.Controllers;
 
+[ApiVersion("1.0")]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 [Authorize]
 public class BasketController : ControllerBase
 {

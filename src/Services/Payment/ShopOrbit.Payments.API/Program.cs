@@ -19,6 +19,12 @@ builder.Services.AddMassTransit(x =>
     // x.AddConsumer<OrderCreatedConsumer>();
     x.AddConsumer<PaymentRequestedConsumer>();
 
+    x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
     x.UsingRabbitMq((context, cfg) =>
     {
         var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "localhost";

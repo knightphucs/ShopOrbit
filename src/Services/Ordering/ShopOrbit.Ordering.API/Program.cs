@@ -1,16 +1,33 @@
+using Asp.Versioning;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Quartz;
+using RedLockNet;
+using RedLockNet.SERedis;
+using RedLockNet.SERedis.Configuration;
 using ShopOrbit.Grpc;
 using ShopOrbit.Ordering.API.Consumers;
 using ShopOrbit.Ordering.API.Data;
+using StackExchange.Redis;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true;
+})
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
 
 builder.Services.AddDbContext<OrderingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -23,8 +40,15 @@ builder.Services.AddMassTransit(x =>
     // x.AddPublishMessageScheduler();
 
     x.AddConsumer<OrderTimeoutConsumer>();
+    x.AddConsumer<StockReservationFailedConsumer>();
     x.AddConsumer<PaymentSucceededConsumer>();
     x.AddConsumer<PaymentFailedConsumer>();
+
+    x.AddEntityFrameworkOutbox<OrderingDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
     
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -75,10 +99,22 @@ builder.Services.AddQuartzHostedService(q =>
     q.WaitForJobsToComplete = true;
 });
 
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection") ?? "localhost:6379";
+var configurationOptions = ConfigurationOptions.Parse(redisConnectionString);
+
+configurationOptions.AbortOnConnectFail = false; 
+
+var multiplexer = ConnectionMultiplexer.Connect(configurationOptions);
+
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration.GetConnectionString("RedisConnection") ?? "localhost:6379";
+    options.Configuration = redisConnectionString;
+    options.InstanceName = "ShopOrbit_Ordering_";
 });
+
+builder.Services.AddSingleton<IDistributedLockFactory, RedLockFactory>(sp =>
+    RedLockFactory.Create(new List<RedLockMultiplexer> { multiplexer })
+);
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"] ?? "ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!");

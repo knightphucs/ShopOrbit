@@ -1,7 +1,9 @@
+using Asp.Versioning;
 using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
+using RedLockNet;
 using ShopOrbit.BuildingBlocks.Contracts;
 using ShopOrbit.Grpc;
 using ShopOrbit.Ordering.API.Consumers;
@@ -13,7 +15,8 @@ using System.Text.Json;
 
 namespace ShopOrbit.Ordering.API.Controllers;
 
-[Route("api/[controller]")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 [ApiController]
 [Authorize]
 public class OrdersController : ControllerBase
@@ -24,6 +27,7 @@ public class OrdersController : ControllerBase
     private readonly IDistributedCache _cache;
     private readonly ProductGrpc.ProductGrpcClient _grpcClient;
     private readonly IMessageScheduler _scheduler;
+    private readonly IDistributedLockFactory _lockFactory;
 
     public OrdersController(
         OrderingDbContext dbContext, 
@@ -31,7 +35,8 @@ public class OrdersController : ControllerBase
         ILogger<OrdersController> logger,
         IDistributedCache cache,
         ProductGrpc.ProductGrpcClient grpcClient,
-        IMessageScheduler scheduler)
+        IMessageScheduler scheduler,
+        IDistributedLockFactory lockFactory)
     {
         _dbContext = dbContext;
         _publishEndpoint = publishEndpoint;
@@ -39,6 +44,7 @@ public class OrdersController : ControllerBase
         _cache = cache;
         _grpcClient = grpcClient;
         _scheduler = scheduler;
+        _lockFactory = lockFactory;
     }
 
     [HttpPost]
@@ -65,27 +71,44 @@ public class OrdersController : ControllerBase
 
         foreach (var item in basket.Items)
         {
-            var productInfo = await _grpcClient.GetProductAsync(new GetProductRequest { ProductId = item.ProductId });
+            var resource = $"lock:product:{item.ProductId}";
+            var expiry = TimeSpan.FromSeconds(5);
+            var wait = TimeSpan.FromSeconds(2);
+            var retry = TimeSpan.FromMicroseconds(200);
 
-            if (!productInfo.Exists) 
-                return BadRequest($"Product with ID {item.ProductId} does not exist.");
-
-            if (productInfo.StockQuantity < item.Quantity)
-                return BadRequest($"Insufficient stock for product {productInfo.Name}. Available: {productInfo.StockQuantity}, Requested: {item.Quantity}");
-            
-            finalOrderItems.Add(new OrderItem
+            using (var redLock = await _lockFactory.CreateLockAsync(resource, expiry, wait, retry))
             {
-                ProductId = Guid.Parse(item.ProductId),
-                ProductName = productInfo.Name,
-                Quantity = item.Quantity,
-                UnitPrice = (decimal)productInfo.Price
-            });
+                if (redLock.IsAcquired)
+                {
+                    var productInfo = await _grpcClient.GetProductAsync(new GetProductRequest { ProductId = item.ProductId });
 
-            eventItems.Add(new OrderItemEvent
-            {
-                ProductId = Guid.Parse(item.ProductId),
-                Quantity = item.Quantity
-            });
+                    if (!productInfo.Exists) 
+                        return BadRequest($"Product with ID {item.ProductId} does not exist.");
+
+                    if (productInfo.StockQuantity < item.Quantity)
+                        return BadRequest($"Insufficient stock for product {productInfo.Name}. Available: {productInfo.StockQuantity}, Requested: {item.Quantity}");
+                    
+                    finalOrderItems.Add(new OrderItem
+                    {
+                        ProductId = Guid.Parse(item.ProductId),
+                        ProductName = productInfo.Name,
+                        Quantity = item.Quantity,
+                        UnitPrice = (decimal)productInfo.Price
+                    });
+
+                    eventItems.Add(new OrderItemEvent
+                    {
+                        ProductId = Guid.Parse(item.ProductId),
+                        Quantity = item.Quantity
+                    });
+                    _logger.LogInformation($"Reserved {item.Quantity} of Product {productInfo.Name} for User {userIdString}");
+                }
+                else
+                {
+                    _logger.LogWarning($"Could not acquire lock for product {item.ProductId}");
+                    return StatusCode(409, $"System is busy processing product {item.ProductId}. Please try again.");
+                }
+            }
         }
 
         var newOrder = new Order
@@ -98,12 +121,11 @@ public class OrdersController : ControllerBase
 
             ShippingAddress = request.ShippingAddress,
             PaymentMethod = request.PaymentMethod,
-            Notes = request.Notes
+            Notes = request.Notes,
+            TimeoutTokenId = null
         };
 
         _dbContext.Orders.Add(newOrder);
-        await _dbContext.SaveChangesAsync();
-
         _logger.LogInformation($"Order {newOrder.Id} created for User {newOrder.UserId}");
 
         var eventMessage = new OrderCreatedEvent
@@ -128,7 +150,6 @@ public class OrdersController : ControllerBase
             );
             
             newOrder.TimeoutTokenId = scheduled.TokenId;
-            await _dbContext.SaveChangesAsync();
 
             _logger.LogInformation(
                 "Scheduled timeout for Order {OrderId}, Token {TokenId}",
@@ -142,6 +163,8 @@ public class OrdersController : ControllerBase
         }
 
         await _cache.RemoveAsync(userIdString);
+
+        await _dbContext.SaveChangesAsync();
 
         return Ok(new 
         { 
@@ -181,5 +204,23 @@ public class OrdersController : ControllerBase
     {
         var orders = _dbContext.Orders.ToList();
         return Ok(orders);
+    }
+
+    [HttpGet("{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetOrderById(Guid id)
+    {
+        var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+
+        var order = await _dbContext.Orders.FindAsync(id);
+
+        if (order == null)
+            return NotFound();
+
+        if (order.UserId != Guid.Parse(userIdString) && !User.IsInRole("Admin") && !User.IsInRole("Staff"))
+            return Forbid();
+
+        return Ok(order);
     }
 }
