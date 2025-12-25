@@ -36,5 +36,12 @@ public class OrderTimeoutConsumer : IConsumer<OrderTimeoutEvent>
                 Quantity = i.Quantity 
             }).ToList()
         });
+
+        await _dbContext.SaveChangesAsync();
+
+        _logger.LogWarning(
+            "Order {OrderId} cancelled due to timeout",
+            order.Id
+        );
     }
 }

@@ -46,8 +46,8 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
             return;
         }
 
-        bool isSuccess = _random.Next(1, 10) > 2;
-
+        // bool isSuccess = _random.Next(1, 10) > 2;
+        bool isSuccess = true;
         var payment = new Payment
         {
             OrderId = message.OrderId,
@@ -82,13 +82,14 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
             });
         }
 
-        await _cache.SetStringAsync(
-            key,
-            "processed",
-            new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
-            });
+        _logger.LogInformation(">>> SLEEPING 15s... KILL RABBITMQ! <<<");
+        await Task.Delay(30000); // Simulate processing delay
+        await _dbContext.SaveChangesAsync();
+
+        await _cache.SetStringAsync(key, "processed", new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+        });
 
         _logger.LogInformation(
             "[Payment Service] Processed Payment {PaymentId}",

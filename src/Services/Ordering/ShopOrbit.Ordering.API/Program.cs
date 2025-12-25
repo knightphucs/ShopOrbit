@@ -68,10 +68,33 @@ builder.Services.AddMassTransit(x =>
 
         cfg.ReceiveEndpoint("order-timeout", e =>
         {
+            e.UseEntityFrameworkOutbox<OrderingDbContext>(context);
             e.ConfigureConsumer<OrderTimeoutConsumer>(context);
         });
 
-        cfg.ConfigureEndpoints(context);
+        cfg.ReceiveEndpoint("order-payment-succeeded", e =>
+        {
+            e.UseEntityFrameworkOutbox<OrderingDbContext>(context);
+            e.ConfigureConsumer<PaymentSucceededConsumer>(context);
+        });
+
+        cfg.ReceiveEndpoint("order-payment-failed", e =>
+        {
+            e.UseEntityFrameworkOutbox<OrderingDbContext>(context);
+            e.ConfigureConsumer<PaymentFailedConsumer>(context);
+        });
+
+        cfg.ReceiveEndpoint("order-stock-failed", e =>
+        {
+            e.UseEntityFrameworkOutbox<OrderingDbContext>(context);
+            e.ConfigureConsumer<StockReservationFailedConsumer>(context);
+        });
+
+        cfg.ReceiveEndpoint("quartz", e =>
+        {
+            e.ConfigureConsumer<MassTransit.QuartzIntegration.ScheduleMessageConsumer>(context);
+            e.ConfigureConsumer<MassTransit.QuartzIntegration.CancelScheduledMessageConsumer>(context);
+        });
         
         cfg.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
     });
@@ -109,7 +132,6 @@ var multiplexer = ConnectionMultiplexer.Connect(configurationOptions);
 builder.Services.AddStackExchangeRedisCache(options =>
 {
     options.Configuration = redisConnectionString;
-    options.InstanceName = "ShopOrbit_Ordering_";
 });
 
 builder.Services.AddSingleton<IDistributedLockFactory, RedLockFactory>(sp =>

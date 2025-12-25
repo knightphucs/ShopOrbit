@@ -114,7 +114,6 @@ services:
       - JwtSettings__Audience=ShopOrbitClient
       - JwtSettings__Secret=ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!
 
-
       - GrpcSettings__CatalogUrl=http://catalog-api:8081
     depends_on:
       shoporbit-db:
@@ -149,8 +148,6 @@ services:
         condition: service_healthy
       shoporbit-rabbitmq:
         condition: service_healthy
-    ports:
-      - "5054:8080"
 
   # 5. Basket Service
   basket-api:
@@ -179,7 +176,6 @@ services:
       - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-api:8080
       - ReverseProxy__Clusters__catalog-cluster__Destinations__destination1__Address=http://catalog-api:8080
       - ReverseProxy__Clusters__ordering-cluster__Destinations__destination1__Address=http://ordering-api:8080
-      - ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address=http://payment-api:8080
       - ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address=http://basket-api:8080
     depends_on:
       - identity-api
@@ -188,6 +184,6 @@ services:
       - payment-api
       - basket-api
     ports:
-      - "5001:8080"
+      - "5000:8080"
 volumes:
   postgres_data:

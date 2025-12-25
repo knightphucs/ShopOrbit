@@ -43,6 +43,8 @@ public class StockReservationFailedConsumer : IConsumer<StockReservationFailedEv
 
             order.Status = "Cancelled";
             order.Notes = $"Cancelled by System: {message.Reason}";
+
+            await _dbContext.SaveChangesAsync();
             
             _logger.LogWarning($"Order {message.OrderId} cancelled because: {message.Reason}");
         }

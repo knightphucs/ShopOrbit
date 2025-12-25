@@ -51,6 +51,8 @@ public class PaymentSucceededConsumer : IConsumer<PaymentSucceededEvent>
             order.PaymentId = message.PaymentId;
 
             _logger.LogInformation($"Order {message.OrderId} status updated to Paid.");
+
+            await _dbContext.SaveChangesAsync();
         }
     }
 }

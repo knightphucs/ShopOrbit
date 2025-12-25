@@ -187,8 +187,14 @@ public class OrdersController : ControllerBase
 
         await _publishEndpoint.Publish(new PaymentRequestedEvent
         {
-            OrderId = orderId
+            OrderId = orderId,
+            UserId = order.UserId,
+            Amount = order.TotalAmount,
+            PaymentMethod = order.PaymentMethod,
+            Currency = "VND"
         });
+
+        await _dbContext.SaveChangesAsync();
 
         return Ok(new
         {
@@ -196,7 +202,6 @@ public class OrdersController : ControllerBase
             OrderId = orderId
         });
     }
-
 
     [HttpGet]
     [Authorize(Roles = "Admin,Staff")]

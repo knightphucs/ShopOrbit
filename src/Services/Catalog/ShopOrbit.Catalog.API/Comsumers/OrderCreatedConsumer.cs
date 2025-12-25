@@ -61,6 +61,8 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
             _logger.LogInformation($"Reserved {item.Quantity} of {product.Name}. New Stock: {product.StockQuantity}");
         }
 
+        await _dbContext.SaveChangesAsync();
+
         _logger.LogInformation($"[Catalog] Stock reserved successfully for Order {message.OrderId}");
     }
 }

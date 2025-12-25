@@ -56,5 +56,7 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
                 Quantity = i.Quantity
             }).ToList()
         });
+
+        await _dbContext.SaveChangesAsync();
     }
 }

@@ -37,6 +37,13 @@ builder.Services.AddMassTransit(x =>
             h.Password(rabbitPass);
         });
 
+        cfg.ReceiveEndpoint("payment-requested-queue", e =>
+        {
+            e.UseEntityFrameworkOutbox<PaymentDbContext>(context);
+            e.ConfigureConsumer<PaymentRequestedConsumer>(context);
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
+        });
+
         // cfg.ReceiveEndpoint("payment-service-queue", e =>
         // {
         //     e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));

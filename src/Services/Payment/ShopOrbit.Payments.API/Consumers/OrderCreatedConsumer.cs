@@ -73,6 +73,8 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
             });
         }
 
+        await _dbContext.SaveChangesAsync();
+
         await _cache.SetStringAsync(key, "processed", new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
