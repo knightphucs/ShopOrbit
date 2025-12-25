@@ -75,8 +75,13 @@ public class AuthController : ControllerBase
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
         var encodedToken = HttpUtility.UrlEncode(token);
 
-        var baseUrl = _configuration["FrontendSettings:BaseUrl"] ?? "http://localhost:5051/api/v1/auth";
-        var confirmUrl = $"{baseUrl}/confirm-email?userId={user.Id}&token={encodedToken}";
+        //var baseUrl = _configuration["FrontendSettings:BaseUrl"] ?? "http://localhost:5051/api/v1/auth";
+        //var confirmUrl = $"{baseUrl}/confirm-email?userId={user.Id}&token={encodedToken}";
+        
+        var frontendBase = _configuration["FrontendSettings:BaseUrl"] ?? "http://localhost:3000";
+        var confirmUrl = $"{frontendBase}/confirm-email?userId={user.Id}&token={encodedToken}";
+
+        
 
 
         await _emailSender.SendEmailAsync(user.Email!, "Confirm your ShopOrbit account",
@@ -96,8 +101,10 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return BadRequest(new { Message = "Invalid user" });
 
-     
-        var result = await _userManager.ConfirmEmailAsync(user, token);
+        // IMPORTANT: token in URL is UrlEncoded in Register, so decode it here
+        var decodedToken = HttpUtility.UrlDecode(token);
+
+        var result = await _userManager.ConfirmEmailAsync(user, decodedToken);
 
         if (!result.Succeeded)
         {
@@ -110,6 +117,7 @@ public class AuthController : ControllerBase
 
         return Ok(new { Message = "Email confirmed successfully. You can now log in." });
     }
+
 
     // login
 
