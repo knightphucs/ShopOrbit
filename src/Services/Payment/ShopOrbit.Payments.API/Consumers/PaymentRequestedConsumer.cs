@@ -46,8 +46,8 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
             return;
         }
 
-        bool isSuccess = _random.Next(1, 10) > 2;
-
+        // bool isSuccess = _random.Next(1, 10) > 2;
+        bool isSuccess = true;
         var payment = new Payment
         {
             OrderId = message.OrderId,
@@ -63,24 +63,10 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
         };
 
         _dbContext.Payments.Add(payment);
-        await _dbContext.SaveChangesAsync();
-
-        await _cache.SetStringAsync(
-            key,
-            "processed",
-            new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
-            });
-
-        _logger.LogInformation(
-            "[Payment Service] Processed Payment {PaymentId}",
-            payment.Id
-        );
 
         if (isSuccess)
         {
-            await _publishEndpoint.Publish(new PaymentSucceededEvent
+            await context.Publish(new PaymentSucceededEvent
             {
                 OrderId = message.OrderId,
                 PaymentId = payment.Id,
@@ -89,11 +75,25 @@ public class PaymentRequestedConsumer : IConsumer<PaymentRequestedEvent>
         }
         else
         {
-            await _publishEndpoint.Publish(new PaymentFailedEvent
+            await context.Publish(new PaymentFailedEvent
             {
                 OrderId = message.OrderId,
                 Reason = payment.FailureReason!
             });
         }
+
+        _logger.LogInformation(">>> SLEEPING 15s... KILL RABBITMQ! <<<");
+        await Task.Delay(30000); // Simulate processing delay
+        await _dbContext.SaveChangesAsync();
+
+        await _cache.SetStringAsync(key, "processed", new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(1)
+        });
+
+        _logger.LogInformation(
+            "[Payment Service] Processed Payment {PaymentId}",
+            payment.Id
+        );
     }
 }

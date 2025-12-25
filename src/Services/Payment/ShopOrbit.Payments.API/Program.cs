@@ -19,6 +19,12 @@ builder.Services.AddMassTransit(x =>
     // x.AddConsumer<OrderCreatedConsumer>();
     x.AddConsumer<PaymentRequestedConsumer>();
 
+    x.AddEntityFrameworkOutbox<PaymentDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
     x.UsingRabbitMq((context, cfg) =>
     {
         var rabbitHost = builder.Configuration["RabbitMq:Host"] ?? "localhost";
@@ -29,6 +35,13 @@ builder.Services.AddMassTransit(x =>
         {
             h.Username(rabbitUser);
             h.Password(rabbitPass);
+        });
+
+        cfg.ReceiveEndpoint("payment-requested-queue", e =>
+        {
+            e.UseEntityFrameworkOutbox<PaymentDbContext>(context);
+            e.ConfigureConsumer<PaymentRequestedConsumer>(context);
+            e.UseMessageRetry(r => r.Interval(3, TimeSpan.FromSeconds(5)));
         });
 
         // cfg.ReceiveEndpoint("payment-service-queue", e =>

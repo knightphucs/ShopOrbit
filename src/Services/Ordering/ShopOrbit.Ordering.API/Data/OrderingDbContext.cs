@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using ShopOrbit.Ordering.API.Models;
 
@@ -16,10 +17,13 @@ public class OrderingDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
         
-        // Cấu hình quan hệ
         modelBuilder.Entity<Order>()
             .HasMany(o => o.Items)
             .WithOne(i => i.Order)
             .HasForeignKey(i => i.OrderId);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }

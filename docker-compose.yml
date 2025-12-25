@@ -6,7 +6,7 @@ services:
     environment:
       - POSTGRES_DB=shoporbit_db
       - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=Password123!
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
@@ -37,8 +37,8 @@ services:
       - RABBITMQ_DEFAULT_USER=guest
       - RABBITMQ_DEFAULT_PASS=guest
     ports:
-      - "5672:5672" # Port for messaging
-      - "15672:15672" # Port Management UI
+      - "5672:5672"
+      - "15672:15672"
     healthcheck:
       test: ["CMD-SHELL", "rabbitmq-diagnostics -q check_running"]
       interval: 10s
@@ -54,9 +54,10 @@ services:
       dockerfile: src/Services/Identity/ShopOrbit.Identity.API/Dockerfile
     container_name: identity-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_identity_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_identity_db;Username=admin;Password=${DATABASE_PASSWORD}
       - JwtSettings__Issuer=ShopOrbitIdentity
       - JwtSettings__Audience=ShopOrbitClient
+      - JwtSettings__Secret=ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!
     depends_on:
       shoporbit-db:
         condition: service_healthy
@@ -70,7 +71,7 @@ services:
       dockerfile: src/Services/Catalog/ShopOrbit.Catalog.API/Dockerfile
     container_name: catalog-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_catalog_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_catalog_db;Username=admin;Password=${DATABASE_PASSWORD}
       - ConnectionStrings__RedisConnection=shoporbit-redis:6379
 
       - RabbitMq__Host=shoporbit-rabbitmq
@@ -79,6 +80,7 @@ services:
 
       - JwtSettings__Issuer=ShopOrbitIdentity
       - JwtSettings__Audience=ShopOrbitClient
+      - JwtSettings__Secret=ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!
 
       - Kestrel__Endpoints__Http__Url=http://+:8080
       - Kestrel__Endpoints__Grpc__Url=http://+:8081
@@ -101,7 +103,7 @@ services:
       dockerfile: src/Services/Ordering/ShopOrbit.Ordering.API/Dockerfile
     container_name: ordering-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_ordering_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_ordering_db;Username=admin;Password=${DATABASE_PASSWORD}
       - ConnectionStrings__RedisConnection=shoporbit-redis:6379
 
       - RabbitMq__Host=shoporbit-rabbitmq
@@ -110,6 +112,7 @@ services:
 
       - JwtSettings__Issuer=ShopOrbitIdentity
       - JwtSettings__Audience=ShopOrbitClient
+      - JwtSettings__Secret=ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!
 
       - GrpcSettings__CatalogUrl=http://catalog-api:8081
     depends_on:
@@ -129,11 +132,15 @@ services:
       dockerfile: src/Services/Payment/ShopOrbit.Payments.API/Dockerfile
     container_name: payment-api
     environment:
-      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_payment_db;Username=admin;Password=Password123!
+      - ConnectionStrings__DefaultConnection=Host=shoporbit-db;Port=5432;Database=shoporbit_payment_db;Username=admin;Password=${DATABASE_PASSWORD}
       - ConnectionStrings__RedisConnection=shoporbit-redis:6379
       - RabbitMq__Host=shoporbit-rabbitmq
       - RabbitMq__UserName=guest
       - RabbitMq__Password=guest
+      - JwtSettings__Issuer=ShopOrbitIdentity
+      - JwtSettings__Audience=ShopOrbitClient
+      - JwtSettings__Secret=ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!
+
     depends_on:
       shoporbit-db:
         condition: service_healthy
@@ -141,8 +148,6 @@ services:
         condition: service_healthy
       shoporbit-rabbitmq:
         condition: service_healthy
-    ports:
-      - "5054:8080"
 
   # 5. Basket Service
   basket-api:
@@ -154,6 +159,8 @@ services:
       - CacheSettings__ConnectionString=shoporbit-redis:6379
       - JwtSettings__Issuer=ShopOrbitIdentity
       - JwtSettings__Audience=ShopOrbitClient
+      - JwtSettings__Secret=ShopOrbit_SecretKey_Must_Be_Very_Long_And_Secure_12345!
+
     depends_on:
       - shoporbit-redis
     ports:
@@ -169,7 +176,6 @@ services:
       - ReverseProxy__Clusters__identity-cluster__Destinations__destination1__Address=http://identity-api:8080
       - ReverseProxy__Clusters__catalog-cluster__Destinations__destination1__Address=http://catalog-api:8080
       - ReverseProxy__Clusters__ordering-cluster__Destinations__destination1__Address=http://ordering-api:8080
-      - ReverseProxy__Clusters__payment-cluster__Destinations__destination1__Address=http://payment-api:8080
       - ReverseProxy__Clusters__basket-cluster__Destinations__destination1__Address=http://basket-api:8080
     depends_on:
       - identity-api
@@ -179,6 +185,5 @@ services:
       - basket-api
     ports:
       - "5000:8080"
-
 volumes:
   postgres_data:

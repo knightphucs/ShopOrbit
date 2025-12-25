@@ -42,8 +42,6 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
         order.Status = "Cancelled";
         order.PaymentId = null;
 
-        await _dbContext.SaveChangesAsync();
-
         _logger.LogWarning(
             "Order {OrderId} cancelled due to payment failure",
             order.Id
@@ -58,5 +56,7 @@ public class PaymentFailedConsumer : IConsumer<PaymentFailedEvent>
                 Quantity = i.Quantity
             }).ToList()
         });
+
+        await _dbContext.SaveChangesAsync();
     }
 }
