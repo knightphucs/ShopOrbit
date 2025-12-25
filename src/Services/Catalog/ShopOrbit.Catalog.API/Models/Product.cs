@@ -22,4 +22,6 @@ public class Product
     public string? ImageUrl { get; set; }
     public Guid CategoryId { get; set; }
     public Category? Category { get; set; }
+
+    public Dictionary<string, string> Specifications { get; set; } = new();
 }

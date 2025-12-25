@@ -8,11 +8,14 @@ using ShopOrbit.Catalog.API.Models;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Asp.Versioning;
 
 namespace ShopOrbit.Catalog.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class CategoriesController : ControllerBase
 {
     private readonly CatalogDbContext _context;

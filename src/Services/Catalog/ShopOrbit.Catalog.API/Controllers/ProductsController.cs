@@ -8,11 +8,14 @@ using Microsoft.EntityFrameworkCore;
 using ShopOrbit.Catalog.API.Data;
 using ShopOrbit.Catalog.API.Models;
 using ShopOrbit.Catalog.API.DTOs;
+using Asp.Versioning;
 
 namespace ShopOrbit.Catalog.API.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class ProductsController : ControllerBase
 {
     private readonly IDistributedCache _cache;
@@ -71,7 +74,8 @@ public class ProductsController : ControllerBase
                 p.Id,
                 p.Name,
                 p.Price,
-                p.Category!.Name
+                p.Category!.Name,
+                p.Specifications
             )) // Map Entity -> DTO
             .ToListAsync();
 
@@ -114,7 +118,8 @@ public class ProductsController : ControllerBase
             product.Id,
             product.Name,
             product.Price,
-            product.Category!.Name
+            product.Category!.Name,
+            product.Specifications
         );
 
         var options = new DistributedCacheEntryOptions()
@@ -204,4 +209,4 @@ public class ProductsController : ControllerBase
     }
 }
 
-public record ProductDto(Guid Id, string Name, decimal Price, string CategoryName);
+public record ProductDto(Guid Id, string Name, decimal Price, string CategoryName, Dictionary<string, string> Specifications);

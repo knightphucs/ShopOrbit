@@ -19,24 +19,24 @@ public class OrderCreatedConsumer : IConsumer<OrderCreatedEvent>
     public async Task Consume(ConsumeContext<OrderCreatedEvent> context)
     {
         var message = context.Message;
-        _logger.LogInformation($"[RabbitMQ] Received Order Created: {message.OrderId} - Amount: {message.TotalAmount}");
+        _logger.LogInformation($"Processing Order: {message.OrderId}");
 
         foreach (var item in message.OrderItems)
         {
             var product = await _dbContext.Products.FindAsync(item.ProductId);
-            if (product != null)
+            if (product == null)
             {
-                product.StockQuantity -= item.Quantity;
-                _logger.LogInformation($"[Updated stock for Product {product.Id}: New Stock = {product.StockQuantity}");
-
-                if (product.StockQuantity < 0)
-                {
-                    _logger.LogWarning($"[Stock Warning] Product {product.Id} is out of stock!");
-                }
+                _logger.LogError($"Product {item.ProductId} not found!");
+                continue;
             }
+            if (product.StockQuantity < item.Quantity)
+            {
+                throw new InvalidOperationException($"Not enough stock for Product {product.Id}. Available: {product.StockQuantity}, Requested: {item.Quantity}");
+            }
+            product.StockQuantity -= item.Quantity;
         }
         
         await _dbContext.SaveChangesAsync();
-        _logger.LogInformation($"Finished processing Order Created: {message.OrderId}");
+        _logger.LogInformation($"Stock updated for Order: {message.OrderId}");
     }
 }

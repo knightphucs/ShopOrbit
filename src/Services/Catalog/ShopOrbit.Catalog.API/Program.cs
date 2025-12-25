@@ -3,18 +3,41 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ShopOrbit.Catalog.API.Comsumers;
+using Asp.Versioning;
 using ShopOrbit.Catalog.API.Data;
 using System.Text;
-
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Npgsql;
 var builder = WebApplication.CreateBuilder(args);
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+// Bật tính năng Dynamic JSON để map được Dictionary
+dataSourceBuilder.EnableDynamicJson();
+
+var dataSource = dataSourceBuilder.Build();
+builder.Services.AddSingleton(dataSource);
 builder.Services.AddDbContext<CatalogDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    // truyền biến dataSource
+    options.UseNpgsql(dataSource);
+
+    options.ConfigureWarnings(warnings => 
+        warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
 builder.Services.AddMassTransit(x =>
 {
     x.AddConsumer<OrderCancelledConsumer>();
     x.AddConsumer<OrderCreatedConsumer>();
+
+    x.AddEntityFrameworkOutbox<CatalogDbContext>(o =>
+    {
+        o.UsePostgres();// cấu hình Lock cho Postgres
+        o.UseBusOutbox();// Kích hoạt Outbox cho Bus
+
+        o.DuplicateDetectionWindow = TimeSpan.FromMinutes(30);
+    });
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -28,15 +51,7 @@ builder.Services.AddMassTransit(x =>
             h.Password(rabbitPass);
         });
 
-        cfg.ReceiveEndpoint("catalog-order-cancelled", e =>
-        {
-            e.ConfigureConsumer<OrderCancelledConsumer>(context);
-        });
-
-        cfg.ReceiveEndpoint("order-created-queue", e =>
-        {
-            e.ConfigureConsumer<OrderCreatedConsumer>(context);
-        });
+        cfg.ConfigureEndpoints(context);
     });
 });
 
@@ -65,6 +80,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+//Api versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.AssumeDefaultVersionWhenUnspecified = true; 
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+    options.ReportApiVersions = true; 
+    options.ApiVersionReader = new Asp.Versioning.UrlSegmentApiVersionReader();
+}).AddMvc();
 
 builder.Services.AddControllers();
 
