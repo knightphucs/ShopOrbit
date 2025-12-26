@@ -1,17 +1,15 @@
-import { env } from "@/env";
-
-import axiosClient from "@/lib/axios";
-import { PagedResult, Product, ProductParams, Category } from "@/types";
+import axiosClient from "@/src/lib/axios";
+import { PagedResult, Product, ProductParams, Category } from "@/src/types";
 
 export const getProducts = async (
   params: ProductParams
 ): Promise<PagedResult<Product>> => {
-  const response = await axiosClient.get("/api/catalog/products", { params });
+  const response = await axiosClient.get("/api/v1/products", { params });
   return response.data;
 };
 
 export const getCategories = async (): Promise<PagedResult<Category>> => {
-  const response = await axiosClient.get("/api/categories?pageSize=50");
+  const response = await axiosClient.get("/api/v1/categories?pageSize=50");
   return response.data;
 };
 // Hàm helper để lấy token từ localStorage (hoặc cookie tùy cách bạn lưu)
