@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -44,7 +45,13 @@ namespace ShopOrbit.Ordering.API.Migrations
                     OrderDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     TotalAmount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
                     Status = table.Column<string>(type: "text", nullable: false),
-                    ShippingAddress = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    Shipping_FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    Shipping_LastName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ShippingAddress_EmailAddress = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
+                    ShippingAddress_AddressLine = table.Column<string>(type: "character varying(180)", maxLength: 180, nullable: false),
+                    ShippingAddress_Country = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ShippingAddress_State = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    ShippingAddress_ZipCode = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: false),
                     PaymentMethod = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Notes = table.Column<string>(type: "text", nullable: true),
                     PaymentId = table.Column<Guid>(type: "uuid", nullable: true),
@@ -80,6 +87,7 @@ namespace ShopOrbit.Ordering.API.Migrations
                     ProductName = table.Column<string>(type: "text", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    Specifications = table.Column<Dictionary<string, string>>(type: "jsonb", nullable: false),
                     OrderId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>

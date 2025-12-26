@@ -1,5 +1,6 @@
-import axiosClient from "@/src/lib/axios";
-import { PagedResult, Product, ProductParams, Category } from "@/src/types";
+import axiosClient from "@/lib/axios";
+import { PagedResult, Product, ProductParams, Category } from "@/types";
+import { env } from "process";
 
 export const getProducts = async (
   params: ProductParams
@@ -17,7 +18,7 @@ const getAuthHeaders = () => {
   const token = localStorage.getItem("token"); // Ví dụ lưu ở localStorage
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`,
+    Authorization: `Bearer ${token}`,
   };
 };
 
@@ -26,15 +27,16 @@ export const catalogApi = {
   getProducts: async (pageIndex = 1, pageSize = 10) => {
     const res = await fetch(
       `${env.gatewayUrl}/api/v1/products?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-      { 
+      {
         cache: "no-store",
-        headers: getAuthHeaders() 
-      } 
+        headers: getAuthHeaders(),
+      }
     );
     // check lỗi để tránh crash nếu token sai hoặc hết hạn
     if (!res.ok) {
-        if (res.status === 401) throw new Error("Unauthorized - Hãy đăng nhập lại");
-        throw new Error("Failed to fetch products");
+      if (res.status === 401)
+        throw new Error("Unauthorized - Hãy đăng nhập lại");
+      throw new Error("Failed to fetch products");
     }
 
     return res.json();
@@ -52,26 +54,26 @@ export const catalogApi = {
   },
 
   updateProduct: async (id: string, data: any) => {
-    const res = await fetch(`${env.gatewayUrl}/api/v1/products/${id}`, { 
+    const res = await fetch(`${env.gatewayUrl}/api/v1/products/${id}`, {
       method: "PUT",
       headers: getAuthHeaders(),
       body: JSON.stringify({
         Id: id,
-        Name: data.Name || data.name, 
+        Name: data.Name || data.name,
         Price: data.Price || data.price,
         StockQuantity: data.StockQuantity || data.stockQuantity,
         Description: data.Description || data.description,
         CategoryId: data.CategoryId || data.categoryId,
-        
+
         // QUAN TRỌNG: Backend chờ "ImageUrl", Frontend form đang là "imageFile"
-        ImageUrl: data.ImageFile || data.imageFile || data.ImageUrl, 
-        
-        Specifications: data.Specifications || data.specifications
+        ImageUrl: data.ImageFile || data.imageFile || data.ImageUrl,
+
+        Specifications: data.Specifications || data.specifications,
       }),
     });
-    
+
     if (!res.ok) throw new Error("Failed to update product");
-    return true; 
+    return true;
   },
 
   //Xóa
@@ -83,15 +85,15 @@ export const catalogApi = {
     if (!res.ok) throw new Error("Failed to delete");
     return true;
   },
-  
+
   //Lấy chi tiết
   getProductById: async (id: string) => {
     const res = await fetch(`${env.gatewayUrl}/api/v1/products/${id}`, {
-      headers: getAuthHeaders(), 
+      headers: getAuthHeaders(),
     });
     if (!res.ok) {
-        if (res.status === 401) throw new Error("Unauthorized");
-        throw new Error("Failed to fetch product detail");
+      if (res.status === 401) throw new Error("Unauthorized");
+      throw new Error("Failed to fetch product detail");
     }
     return res.json();
   },
@@ -99,16 +101,17 @@ export const catalogApi = {
   //Lấy danh sách Category
   getCategories: async (pageIndex = 1, pageSize = 50) => {
     const res = await fetch(
-      `${env.gatewayUrl}/api/v1/categories?pageIndex=${pageIndex}&pageSize=${pageSize}`, 
-      { 
+      `${env.gatewayUrl}/api/v1/categories?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+      {
         cache: "no-store",
-        headers: getAuthHeaders() 
+        headers: getAuthHeaders(),
       }
     );
-    
+
     if (!res.ok) {
-        if (res.status === 401) throw new Error("Unauthorized - Vui lòng đăng nhập lại");
-        throw new Error("Failed to fetch categories");
+      if (res.status === 401)
+        throw new Error("Unauthorized - Vui lòng đăng nhập lại");
+      throw new Error("Failed to fetch categories");
     }
 
     return res.json();
@@ -117,7 +120,7 @@ export const catalogApi = {
   //Lấy chi tiết 1 Category
   getCategoryById: async (id: string) => {
     const res = await fetch(`${env.gatewayUrl}/api/v1/categories/${id}`, {
-        headers: getAuthHeaders(), 
+      headers: getAuthHeaders(),
     });
     if (!res.ok) throw new Error("Failed to fetch category");
     return res.json();
@@ -141,7 +144,7 @@ export const catalogApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify({
         Id: id,
-        ...data // Name, Description
+        ...data, // Name, Description
       }),
     });
     if (!res.ok) throw new Error("Failed to update category");
@@ -156,5 +159,5 @@ export const catalogApi = {
     });
     if (!res.ok) throw new Error("Failed to delete category");
     return true;
-  }
+  },
 };

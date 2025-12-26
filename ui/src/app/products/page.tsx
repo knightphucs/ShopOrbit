@@ -1,86 +1,30 @@
-import {
-  getProducts,
-  getCategories,
-} from "@/src/features/catalog/services/catalogApi";
-import ProductCard from "@/src/features/catalog/components/ProductCard";
-import ProductFilters from "@/src/features/catalog/components/ProductFilters";
-import { Product, ProductParams } from "@/src/types";
-import SortSelect from "./_components/SortSelect";
-import Pagination from "./_components/Pagination";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import ProductsGrid from "@/features/catalog/components/ProductsGrid";
+import { Suspense } from "react";
 
-interface Props {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
-}
-
-export default async function ProductsPage({ searchParams }: Props) {
-  const resolvedSearchParams = await searchParams;
-
-  const apiParams: ProductParams = {
-    pageIndex: Number(resolvedSearchParams.pageIndex) || 1,
-    pageSize: 10,
-    search: resolvedSearchParams.search,
-    categoryId: resolvedSearchParams.categoryId,
-    sort: resolvedSearchParams.sort,
-    minPrice: resolvedSearchParams.minPrice
-      ? Number(resolvedSearchParams.minPrice)
-      : undefined,
-    maxPrice: resolvedSearchParams.maxPrice
-      ? Number(resolvedSearchParams.maxPrice)
-      : undefined,
-  };
-
-  const [productsData, categoriesData] = await Promise.all([
-    getProducts(apiParams),
-    getCategories(),
-  ]);
-
+export default function ProductsPage() {
   return (
-    <div className="bg-white">
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-baseline justify-between border-b border-gray-200 pb-6">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">
-            Products
-          </h1>
+    <div className="min-h-screen bg-white font-sans text-gray-900 flex flex-col">
+      <Header />
 
-          {/* Sort Dropdown đơn giản */}
-          <div className="flex items-center">
-            <SortSelect />
-          </div>
+      <main className="grow container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+            All Products
+          </h1>
+          <p className="text-gray-500 mt-2">
+            Browse our extensive collection of premium technology.
+          </p>
         </div>
 
-        <section aria-labelledby="products-heading" className="pb-24 pt-6">
-          <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-4">
-            {/* Sidebar Filters */}
-            <form className="hidden lg:block">
-              <ProductFilters categories={categoriesData.items} />
-            </form>
-
-            {/* Product Grid */}
-            <div className="lg:col-span-3">
-              {productsData.items.length === 0 ? (
-                <div className="text-center py-10 text-gray-500">
-                  No products found.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
-                  {productsData.items.map((product: Product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-              )}
-
-              {/* Pagination Controls */}
-              <div className="mt-10 flex justify-center space-x-2">
-                <Pagination
-                  pageIndex={productsData.pageIndex}
-                  totalCount={productsData.totalCount}
-                  pageSize={productsData.pageSize}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* Suspense là bắt buộc khi dùng useSearchParams trong Client Component của Next.js */}
+        <Suspense fallback={<div>Loading products...</div>}>
+          <ProductsGrid />
+        </Suspense>
       </main>
+
+      <Footer />
     </div>
   );
 }

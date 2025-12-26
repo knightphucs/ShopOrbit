@@ -9,10 +9,10 @@ using ShopOrbit.Identity.API.Data;
 
 #nullable disable
 
-namespace ShopOrbit.Identity.API.Data.Migrations
+namespace ShopOrbit.Identity.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251225194059_InitialCreate")]
+    [Migration("20251226175405_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />

@@ -6,15 +6,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using ShopOrbit.Ordering.API.Data;
+using ShopOrbit.Catalog.API.Data;
 
 #nullable disable
 
-namespace ShopOrbit.Ordering.API.Migrations
+namespace ShopOrbit.Catalog.API.Migrations
 {
-    [DbContext(typeof(OrderingDbContext))]
-    [Migration("20251226145921_UpdateAddressSchema")]
-    partial class UpdateAddressSchema
+    [DbContext(typeof(CatalogDbContext))]
+    [Migration("20251226175307_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -194,75 +194,99 @@ namespace ShopOrbit.Ordering.API.Migrations
                     b.ToTable("OutboxState");
                 });
 
-            modelBuilder.Entity("ShopOrbit.Ordering.API.Models.Order", b =>
+            modelBuilder.Entity("ShopOrbit.Catalog.API.Models.Category", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Notes")
+                    b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("OrderDate")
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("Updated_At")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("PaymentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid?>("TimeoutTokenId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Categories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "Mobile devices",
+                            Name = "Smartphones",
+                            Updated_At = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("b4d2f2f5-6c7e-5d3f-8a2f-2f2f2f2f2f2f"),
+                            Description = "Portable computers",
+                            Name = "Laptops",
+                            Updated_At = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        });
                 });
 
-            modelBuilder.Entity("ShopOrbit.Ordering.API.Models.OrderItem", b =>
+            modelBuilder.Entity("ShopOrbit.Catalog.API.Models.Product", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("OrderId")
+                    b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ProductName")
-                        .IsRequired()
+                    b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
+                    b.Property<string>("ImageUrl")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<Dictionary<string, string>>("Specifications")
                         .IsRequired()
                         .HasColumnType("jsonb");
 
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
+                    b.Property<int>("StockQuantity")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("CategoryId");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("Products");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("d28888e9-2ba9-473a-a40f-e38cb54f9b35"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Name = "iPhone 15 Pro",
+                            Price = 999m,
+                            Specifications = new Dictionary<string, string> { ["Color"] = "Titanium Black", ["Storage"] = "256GB", ["Screen"] = "6.1 inch" },
+                            StockQuantity = 100
+                        },
+                        new
+                        {
+                            Id = new Guid("da2fd609-d754-4feb-8acd-c4f9ff13ba96"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Name = "Samsung Galaxy S24",
+                            Price = 899m,
+                            Specifications = new Dictionary<string, string> { ["CPU"] = "M3 Pro", ["RAM"] = "18GB", ["SSD"] = "512GB" },
+                            StockQuantity = 50
+                        });
                 });
 
             modelBuilder.Entity("MassTransit.EntityFrameworkCoreIntegration.OutboxMessage", b =>
@@ -277,75 +301,15 @@ namespace ShopOrbit.Ordering.API.Migrations
                         .HasPrincipalKey("MessageId", "ConsumerId");
                 });
 
-            modelBuilder.Entity("ShopOrbit.Ordering.API.Models.Order", b =>
+            modelBuilder.Entity("ShopOrbit.Catalog.API.Models.Product", b =>
                 {
-                    b.OwnsOne("ShopOrbit.Ordering.API.Models.Address", "ShippingAddress", b1 =>
-                        {
-                            b1.Property<Guid>("OrderId")
-                                .HasColumnType("uuid");
-
-                            b1.Property<string>("AddressLine")
-                                .IsRequired()
-                                .HasMaxLength(180)
-                                .HasColumnType("character varying(180)");
-
-                            b1.Property<string>("Country")
-                                .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)");
-
-                            b1.Property<string>("EmailAddress")
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)");
-
-                            b1.Property<string>("FirstName")
-                                .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)")
-                                .HasColumnName("Shipping_FirstName");
-
-                            b1.Property<string>("LastName")
-                                .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)")
-                                .HasColumnName("Shipping_LastName");
-
-                            b1.Property<string>("State")
-                                .IsRequired()
-                                .HasMaxLength(50)
-                                .HasColumnType("character varying(50)");
-
-                            b1.Property<string>("ZipCode")
-                                .IsRequired()
-                                .HasMaxLength(20)
-                                .HasColumnType("character varying(20)");
-
-                            b1.HasKey("OrderId");
-
-                            b1.ToTable("Orders");
-
-                            b1.WithOwner()
-                                .HasForeignKey("OrderId");
-                        });
-
-                    b.Navigation("ShippingAddress")
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("ShopOrbit.Ordering.API.Models.OrderItem", b =>
-                {
-                    b.HasOne("ShopOrbit.Ordering.API.Models.Order", "Order")
-                        .WithMany("Items")
-                        .HasForeignKey("OrderId")
+                    b.HasOne("ShopOrbit.Catalog.API.Models.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Order");
-                });
-
-            modelBuilder.Entity("ShopOrbit.Ordering.API.Models.Order", b =>
-                {
-                    b.Navigation("Items");
+                    b.Navigation("Category");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Category } from "@/src/types";
+import { Category } from "@/types";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 

@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import ProductCard from "./ProductCard";
-import api from "@/src/lib/axios";
-import type { Product, PagedResult } from "@/src/types";
+import api from "@/lib/axios";
+import type { Product, PagedResult } from "@/types";
 import { ArrowRight } from "lucide-react";
 
 interface Props {

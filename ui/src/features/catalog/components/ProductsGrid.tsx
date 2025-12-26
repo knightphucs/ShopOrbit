@@ -1,9 +1,9 @@
-// src/features/catalog/components/ProductsGrid.tsx
 "use client";
 import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation"; // Thêm hook
 import ProductCard from "./ProductCard";
-import api from "@/src/lib/axios";
-import type { Product, PagedResult, ProductParams } from "@/src/types";
+import api from "@/lib/axios";
+import type { Product, PagedResult, ProductParams } from "@/types";
 import {
   Search,
   ChevronLeft,
@@ -12,31 +12,53 @@ import {
 } from "lucide-react";
 
 export default function ProductsGrid() {
+  const router = useRouter();
+  const searchParams = useSearchParams(); // Đọc URL
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [totalPages, setTotalPages] = useState<number>(1);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Khởi tạo params từ URL
   const [params, setParams] = useState<ProductParams>({
     pageIndex: 1,
     pageSize: 8,
-    search: "",
+    search: searchParams.get("search") || "", // Lấy từ URL
     sort: "",
-    minPrice: undefined,
-    maxPrice: undefined,
-    // categoryId: undefined, // Tạm thời bỏ qua filter theo ID
+    categoryId: searchParams.get("categoryId") || undefined, // Lấy từ URL
   });
 
-  const [searchInput, setSearchInput] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>(
+    searchParams.get("search") || ""
+  );
 
+  // Update params khi URL thay đổi (Ví dụ: Search từ Header)
+  useEffect(() => {
+    const searchFromUrl = searchParams.get("search") || "";
+    const categoryFromUrl = searchParams.get("categoryId") || undefined;
+
+    setSearchInput(searchFromUrl);
+    setParams((prev) => ({
+      ...prev,
+      pageIndex: 1,
+      search: searchFromUrl,
+      categoryId: categoryFromUrl,
+    }));
+  }, [searchParams]);
+
+  // Debounce Search Input nội bộ
   useEffect(() => {
     const t = setTimeout(() => {
-      setParams((p) => ({ ...p, pageIndex: 1, search: searchInput.trim() }));
-    }, 400);
+      if (searchInput !== params.search) {
+        setParams((p) => ({ ...p, pageIndex: 1, search: searchInput.trim() }));
+      }
+    }, 500);
     return () => clearTimeout(t);
   }, [searchInput]);
 
+  // Fetch Data
   const fetchProducts = async () => {
     setLoading(true);
     setError("");
@@ -44,16 +66,23 @@ export default function ProductsGrid() {
       const { data } = await api.get<PagedResult<Product>>("/api/v1/Products", {
         params,
       });
-      const items = (data.items ?? (data as any).data ?? []).map(
-        (p: Product) => ({
-          ...p,
-          imageUrl: p.imageUrl || "",
-        })
-      );
-      setProducts(items);
+
+      let items: Product[] = [];
+      if (data && Array.isArray((data as any).data)) {
+        items = (data as any).data;
+      } else if (data && Array.isArray(data.items)) {
+        items = data.items;
+      }
+
+      const mappedItems = items.map((p) => ({
+        ...p,
+        imageUrl: p.imageUrl || "",
+      }));
+
+      setProducts(mappedItems);
       setTotalPages(data.totalPages ?? (data as any).totalPages ?? 1);
     } catch (e: any) {
-      setError(e?.message || "Failed to load products.");
+      setError("Failed to connect to server.");
       setProducts([]);
     } finally {
       setLoading(false);
@@ -62,33 +91,32 @@ export default function ProductsGrid() {
 
   useEffect(() => {
     fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     params.pageIndex,
     params.search,
     params.sort,
     params.minPrice,
     params.maxPrice,
+    params.categoryId,
   ]);
 
   return (
     <div className="w-full">
       {/* --- Toolbar --- */}
       <div className="mb-8 flex flex-col gap-4 border-b border-gray-200 pb-6 md:flex-row md:items-center md:justify-between">
-        {/* Search */}
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search products..."
-            className="w-full rounded-md border border-gray-300 px-3 py-2 pl-9 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black"
-          />
+        <div className="text-sm text-gray-500">
+          Showing results for{" "}
+          {params.categoryId ? "Selected Category" : "All Products"}
+          {params.search && (
+            <span>
+              {" "}
+              matching "<strong>{params.search}</strong>"
+            </span>
+          )}
         </div>
 
         {/* Filter & Sort Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-auto">
           <select
             className="h-9 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 outline-none focus:border-black"
             value={params.sort ?? ""}
@@ -109,16 +137,14 @@ export default function ProductsGrid() {
                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
             }`}
           >
-            <SlidersHorizontal size={14} /> Price Filter
+            <SlidersHorizontal size={14} /> Filter
           </button>
         </div>
       </div>
 
-      {/* --- Filter Panel (Toggle) --- */}
+      {/* --- Filter Panel --- */}
       {showFilters && (
-        <div className="mb-8 grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4 sm:grid-cols-2 max-w-lg ml-auto">
-          {/* Đã xóa Category ID Input */}
-
+        <div className="mb-8 grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4 max-w-lg ml-auto border border-gray-100">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-500">
               Min Price
@@ -172,12 +198,16 @@ export default function ProductsGrid() {
 
       {/* --- Product Grid --- */}
       {loading ? (
-        <div className="py-20 text-center text-gray-500">
-          <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-          <p className="mt-2 text-sm">Loading inventory...</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="aspect-4/3 bg-gray-100 rounded-lg animate-pulse"
+            />
+          ))}
         </div>
       ) : error ? (
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-600">
+        <div className="rounded-md bg-red-50 p-8 text-center text-sm text-red-600">
           {error}
         </div>
       ) : products.length > 0 ? (
@@ -187,14 +217,15 @@ export default function ProductsGrid() {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed border-gray-300 py-16 text-center text-gray-500">
-          <p>No products found matching your criteria.</p>
+        <div className="rounded-lg border border-dashed border-gray-300 py-24 text-center text-gray-500">
+          <p className="text-lg font-medium text-gray-900">No products found</p>
+          <p>Try adjusting your search or filters.</p>
           <button
             onClick={() => {
               setSearchInput("");
-              setParams({ pageIndex: 1, pageSize: 8 });
+              router.push("/products"); // Reset URL
             }}
-            className="mt-2 text-sm font-medium text-blue-600 hover:underline"
+            className="mt-4 text-sm font-bold text-blue-600 hover:underline"
           >
             Clear all filters
           </button>
@@ -203,7 +234,7 @@ export default function ProductsGrid() {
 
       {/* --- Pagination --- */}
       {products.length > 0 && (
-        <div className="mt-10 flex items-center justify-center gap-2">
+        <div className="mt-12 flex items-center justify-center gap-2">
           <button
             disabled={params.pageIndex === 1}
             onClick={() =>
@@ -212,13 +243,13 @@ export default function ProductsGrid() {
                 pageIndex: Math.max(1, (p.pageIndex ?? 1) - 1),
               }))
             }
-            className="flex h-9 w-9 items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 hover:border-black disabled:opacity-30 disabled:hover:border-gray-200 transition-all"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={18} />
           </button>
 
-          <span className="px-4 text-sm font-medium text-gray-700">
-            Page {params.pageIndex} of {totalPages}
+          <span className="px-4 text-sm font-medium text-gray-900">
+            Page {params.pageIndex} / {totalPages}
           </span>
 
           <button
@@ -229,9 +260,9 @@ export default function ProductsGrid() {
                 pageIndex: Math.min(totalPages ?? 1, (p.pageIndex ?? 1) + 1),
               }))
             }
-            className="flex h-9 w-9 items-center justify-center rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:hover:bg-white"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 hover:border-black disabled:opacity-30 disabled:hover:border-gray-200 transition-all"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
       )}

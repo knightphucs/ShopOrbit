@@ -8,7 +8,7 @@ using ShopOrbit.Identity.API.Data;
 
 #nullable disable
 
-namespace ShopOrbit.Identity.API.Data.Migrations
+namespace ShopOrbit.Identity.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot

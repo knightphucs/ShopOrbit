@@ -1,8 +1,8 @@
 // src/app/page.tsx
-import Header from "@/src/components/layout/Header";
-import ProductSection from "@/src/features/catalog/components/ProductSection";
+import Header from "@/components/layout/Header";
+import ProductSection from "@/features/catalog/components/ProductSection";
 import Link from "next/link";
-import { Category } from "@/src/types";
+import { Category } from "@/types";
 
 // Hàm lấy danh mục (chạy trên Server)
 async function getCategories(): Promise<Category[]> {
