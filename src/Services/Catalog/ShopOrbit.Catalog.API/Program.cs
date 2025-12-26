@@ -8,14 +8,17 @@ using ShopOrbit.Catalog.API.Data;
 using System.Text;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
+using StackExchange.Redis;
+
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// 2. Tạo DataSourceBuilder và BẬT DynamicJson
 var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-// Bật tính năng Dynamic JSON để map được Dictionary
 dataSourceBuilder.EnableDynamicJson();
 
 var dataSource = dataSourceBuilder.Build();
+
 builder.Services.AddSingleton(dataSource);
 builder.Services.AddDbContext<CatalogDbContext>(options =>
 {
@@ -25,6 +28,20 @@ builder.Services.AddDbContext<CatalogDbContext>(options =>
     options.ConfigureWarnings(warnings => 
         warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
+
+// Cấu hình Redis Connection String
+var redisConnectionString = builder.Configuration.GetConnectionString("RedisConnection") ?? "localhost:6379";
+
+// Đăng ký IDistributedCache
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConnectionString;
+    options.InstanceName = "ShopOrbit_Catalog_";
+});
+//Đăng ký IConnectionMultiplexer (Để dùng lệnh quét Keys xóa hàng loạt)
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp => 
+    ConnectionMultiplexer.Connect(redisConnectionString));
+
 
 builder.Services.AddMassTransit(x =>
 {

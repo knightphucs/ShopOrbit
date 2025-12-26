@@ -21,5 +21,6 @@ public record CategoryDto(
         Guid Id,
         string Name,
         string? Description,
-        DateTime Updated_At
+        DateTime Updated_At,
+        int ProductCount
     );
