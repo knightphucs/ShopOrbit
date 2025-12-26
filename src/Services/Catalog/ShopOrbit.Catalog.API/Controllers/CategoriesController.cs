@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Asp.Versioning;
+using StackExchange.Redis;
 
 namespace ShopOrbit.Catalog.API.Controllers;
 
@@ -20,11 +21,13 @@ public class CategoriesController : ControllerBase
 {
     private readonly CatalogDbContext _context;
     private readonly IDistributedCache _cache;
+    private readonly IConnectionMultiplexer _redis;
 
-    public CategoriesController(CatalogDbContext context, IDistributedCache cache)
+    public CategoriesController(CatalogDbContext context, IDistributedCache cache, IConnectionMultiplexer redis)
     {
         _context = context;
         _cache = cache;
+        _redis = redis;
     }
 
     // GET ALL
@@ -65,7 +68,13 @@ public class CategoriesController : ControllerBase
         var items = await query
             .Skip((spec.PageIndex - 1) * spec.PageSize)
             .Take(spec.PageSize)
-            .Select(c => new CategoryDto(c.Id, c.Name, c.Description, c.Updated_At))
+            .Select(c => new CategoryDto(
+                c.Id, 
+                c.Name, 
+                c.Description, 
+                c.Updated_At,
+                _context.Products.Count(p => p.CategoryId == c.Id)
+            ))
             .ToListAsync();
 
         var result = new PagedResult<CategoryDto>(items, totalCount, spec.PageIndex, spec.PageSize);
@@ -115,6 +124,7 @@ public class CategoriesController : ControllerBase
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
 
+        await InvalidateCachePattern("catalog:categories*");
         return CreatedAtAction(nameof(GetCategoryById), new { id = category.Id }, category);
     }
 
@@ -134,6 +144,7 @@ public class CategoriesController : ControllerBase
 
         // Remove cache
         await _cache.RemoveAsync($"catalog:category:{id}");
+        await InvalidateCachePattern("catalog:categories*");
 
         return NoContent();
     }
@@ -154,7 +165,7 @@ public class CategoriesController : ControllerBase
         await _context.SaveChangesAsync();
 
         await _cache.RemoveAsync($"catalog:category:{id}");
-
+        await InvalidateCachePattern("catalog:categories*");
         return NoContent();
     }
 
@@ -185,6 +196,21 @@ public class CategoriesController : ControllerBase
     {
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(content));
         return "\"" + Convert.ToBase64String(hash) + "\"";
+    }
+    private async Task InvalidateCachePattern(string pattern)
+    {
+        
+        var server = _redis.GetServer(_redis.GetEndPoints().First());
+        var db = _redis.GetDatabase();
+        
+        string fullPattern = "ShopOrbit_Catalog_" + pattern; 
+
+        var keys = server.Keys(pattern: fullPattern).ToArray();
+        
+        if (keys.Any())
+        {
+            await db.KeyDeleteAsync(keys);
+        }
     }
 }
 

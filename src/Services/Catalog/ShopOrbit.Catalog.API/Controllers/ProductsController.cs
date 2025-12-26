@@ -9,6 +9,7 @@ using ShopOrbit.Catalog.API.Data;
 using ShopOrbit.Catalog.API.Models;
 using ShopOrbit.Catalog.API.DTOs;
 using Asp.Versioning;
+using StackExchange.Redis;
 
 namespace ShopOrbit.Catalog.API.Controllers;
 
@@ -20,11 +21,12 @@ public class ProductsController : ControllerBase
 {
     private readonly IDistributedCache _cache;
     private readonly CatalogDbContext _context;
-
-    public ProductsController(IDistributedCache cache, CatalogDbContext context)
+    private readonly IConnectionMultiplexer _redis;
+    public ProductsController(IDistributedCache cache, CatalogDbContext context, IConnectionMultiplexer redis)
     {
         _cache = cache;
         _context = context;
+        _redis = redis;
     }
 
     // GET ALL 
@@ -74,7 +76,11 @@ public class ProductsController : ControllerBase
                 p.Id,
                 p.Name,
                 p.Price,
+                p.Description,  
+                p.StockQuantity,
                 p.Category!.Name,
+                p.CategoryId,    
+                p.ImageUrl,
                 p.Specifications
             )) // Map Entity -> DTO
             .ToListAsync();
@@ -118,7 +124,11 @@ public class ProductsController : ControllerBase
             product.Id,
             product.Name,
             product.Price,
+            product.Description, 
+            product.StockQuantity,
             product.Category!.Name,
+            product.CategoryId,  
+            product.ImageUrl,
             product.Specifications
         );
 
@@ -139,6 +149,7 @@ public class ProductsController : ControllerBase
         _context.Products.Add(product);
         await _context.SaveChangesAsync();
         
+        await InvalidateCachePattern("catalog:products*");
         return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
     }
 
@@ -155,11 +166,14 @@ public class ProductsController : ControllerBase
         product.Description = productUpdate.Description;
         product.StockQuantity = productUpdate.StockQuantity;
         product.ImageUrl = productUpdate.ImageUrl;
+        product.CategoryId = productUpdate.CategoryId;
 
+        product.Specifications = productUpdate.Specifications;
+        
         await _context.SaveChangesAsync();
 
         await _cache.RemoveAsync($"catalog:product:{id}");
-
+        await InvalidateCachePattern("catalog:products*");
         return NoContent();
     }
 
@@ -176,7 +190,7 @@ public class ProductsController : ControllerBase
 
         // Invalidation
         await _cache.RemoveAsync($"catalog:product:{id}");
-    
+        await InvalidateCachePattern("catalog:products*");
         return NoContent();
     }
 
@@ -207,6 +221,32 @@ public class ProductsController : ControllerBase
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(content));
         return "\"" + Convert.ToBase64String(hash) + "\"";
     }
+
+    private async Task InvalidateCachePattern(string pattern)
+    {
+        var server = _redis.GetServer(_redis.GetEndPoints().First());
+        var db = _redis.GetDatabase();
+        
+        // Phải khớp với InstanceName trong Program.cs
+        string fullPattern = "ShopOrbit_Catalog_" + pattern; 
+
+        var keys = server.Keys(pattern: fullPattern).ToArray();
+        
+        if (keys.Any())
+        {
+            await db.KeyDeleteAsync(keys);
+        }
+    }
 }
 
-public record ProductDto(Guid Id, string Name, decimal Price, string CategoryName, Dictionary<string, string> Specifications);
+public record ProductDto(
+    Guid Id,
+    string Name,
+    decimal Price,
+    string Description,
+    int StockQuantity, 
+    string CategoryName,
+    Guid CategoryId,    
+    string? ImageUrl,
+    Dictionary<string, string>? Specifications
+);
