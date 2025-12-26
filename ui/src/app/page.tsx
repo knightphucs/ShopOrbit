@@ -1,92 +1,95 @@
-import Header from "@/components/layout/Header";
-import ProductCard, {
-  Product,
-} from "@/features/catalog/components/ProductCard";
+// src/app/page.tsx
+import Header from "@/src/components/layout/Header";
+import ProductSection from "@/src/features/catalog/components/ProductSection";
+import Link from "next/link";
+import { Category } from "@/src/types";
 
-// 1. Dữ liệu giả (Mock Data) - Sau này bạn sẽ thay bằng await callApi()
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Sony WH-1000XM5",
-    price: 349,
-    description: "Tai nghe chống ồn hàng đầu thế giới với chất âm tuyệt hảo.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-  {
-    id: "2",
-    name: "MacBook Air M2",
-    price: 1199,
-    description: "Siêu mỏng, siêu nhẹ, sức mạnh vượt trội từ chip M2.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1517336714731-489689fd1ca4?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-  {
-    id: "3",
-    name: "Mechanical Keyboard",
-    price: 89,
-    description: "Bàn phím cơ Custom layout 75% với switch linear mượt mà.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1595225476474-87563907a212?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-  {
-    id: "4",
-    name: "Gaming Mouse Pro",
-    price: 59,
-    description: "Chuột chơi game không dây độ trễ thấp, cảm biến quang học.",
-    imageUrl:
-      "https://images.unsplash.com/photo-1527814050087-3793815479db?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3",
-  },
-];
+// Hàm lấy danh mục (chạy trên Server)
+async function getCategories(): Promise<Category[]> {
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://127.0.0.1:5000";
 
-export default function Home() {
+  try {
+    const res = await fetch(`${apiUrl}/api/v1/categories?pageSize=20`, {
+      cache: "no-store", // Luôn lấy mới nhất
+    });
+
+    if (!res.ok) {
+      console.error("❌ API Error:", res.status);
+      return [];
+    }
+
+    const jsonResponse = await res.json();
+
+    if (jsonResponse.data && Array.isArray(jsonResponse.data)) {
+      return jsonResponse.data;
+    }
+
+    if (Array.isArray(jsonResponse)) {
+      return jsonResponse;
+    }
+
+    console.warn("⚠️ API trả về format lạ:", jsonResponse);
+    return [];
+  } catch (error) {
+    console.error("❌ Fetch failed (Network/Parse):", error);
+    return [];
+  }
+}
+
+export default async function Home() {
+  const categories = await getCategories();
+  const displayCategories = categories;
+
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
+    <div className="min-h-screen bg-white font-sans text-gray-900">
       <Header />
 
       <main>
         {/* HERO SECTION */}
-        <section className="bg-indigo-900 text-white py-20">
+        <section className="bg-gray-50 py-20 md:py-32">
           <div className="container mx-auto px-4 text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight">
-              Công nghệ trong tầm tay
+            <span className="mb-4 inline-block px-3 py-1 text-xs font-bold tracking-wider text-blue-600 uppercase bg-blue-50 rounded-full">
+              New Collection 2025
+            </span>
+            <h1 className="mb-6 text-4xl font-extrabold tracking-tight text-gray-900 md:text-6xl">
+              Technology <br />
+              <span className="text-gray-400">Redefined.</span>
             </h1>
-            <p className="text-indigo-200 text-xl mb-8 max-w-2xl mx-auto">
-              Khám phá các sản phẩm công nghệ mới nhất với mức giá tốt nhất tại
-              ShopOrbit.
-            </p>
-            <button className="bg-white text-indigo-900 px-8 py-3 rounded-full font-bold hover:bg-indigo-50 transition-colors">
-              Mua sắm ngay
-            </button>
+            <div className="flex justify-center gap-4 mt-8">
+              <Link
+                href="/products"
+                className="rounded-full bg-black px-8 py-4 text-sm font-bold text-white hover:bg-gray-800"
+              >
+                Shop Now
+              </Link>
+            </div>
           </div>
         </section>
 
-        {/* FEATURED PRODUCTS SECTION */}
-        <section className="container mx-auto px-4 py-16">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">
-              Sản phẩm nổi bật
-            </h2>
-            <a
-              href="/products"
-              className="text-indigo-600 font-semibold hover:underline"
-            >
-              Xem tất cả &rarr;
-            </a>
-          </div>
+        {/* --- SECTION 1: LATEST ARRIVALS --- */}
+        <ProductSection title="Latest Arrivals" sort="dateDesc" limit={4} />
 
-          {/* Grid Layout cho sản phẩm */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {MOCK_PRODUCTS.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+        {/* --- DYNAMIC SECTIONS --- */}
+        {displayCategories.map((category) => (
+          <ProductSection
+            key={category.id}
+            title={category.name}
+            categoryId={category.id}
+            limit={4}
+          />
+        ))}
+
+        {/* --- PROMO BANNER --- */}
+        <section className="py-20">
+          <div className="container mx-auto px-4">
+            {/* ... Banner content ... */}
           </div>
         </section>
       </main>
 
-      {/* Footer đơn giản */}
-      <footer className="bg-white border-t border-gray-200 py-8 mt-12 text-center text-gray-500 text-sm">
-        <p>© 2024 ShopOrbit. Built with .NET Microservices & Next.js</p>
+      <footer className="border-t border-gray-200 bg-white py-12 text-center">
+        <p className="text-sm text-gray-500">© 2024 ShopOrbit.</p>
       </footer>
     </div>
   );
