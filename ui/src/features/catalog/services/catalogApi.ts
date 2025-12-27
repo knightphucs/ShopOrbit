@@ -1,6 +1,6 @@
 import axiosClient from "@/lib/axios";
 import { PagedResult, Product, ProductParams, Category } from "@/types";
-import { env } from "process";
+import { env } from "@/env";
 
 export const getProducts = async (
   params: ProductParams

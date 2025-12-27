@@ -12,6 +12,7 @@ using ShopOrbit.Ordering.API.DTOs;
 using ShopOrbit.Ordering.API.Models;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace ShopOrbit.Ordering.API.Controllers;
 
@@ -82,6 +83,7 @@ public class OrdersController : ControllerBase
                 ProductName = productInfo.Name,
                 Quantity = item.Quantity,
                 UnitPrice = (decimal)productInfo.Price,
+                ImageUrl = item.ImageUrl, 
                 Specifications = item.SelectedSpecifications ?? new Dictionary<string, string>()
             });
 
@@ -205,11 +207,14 @@ public class OrdersController : ControllerBase
         var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
 
-        var order = await _dbContext.Orders.FindAsync(id);
+        var order = await _dbContext.Orders
+            .Include(o => o.Items) 
+            .FirstOrDefaultAsync(o => o.Id == id);
 
         if (order == null)
             return NotFound();
 
+        // Logic check quyền xem đơn (User chỉ xem đơn mình, Admin/Staff xem hết)
         if (order.UserId != Guid.Parse(userIdString) && !User.IsInRole("Admin") && !User.IsInRole("Staff"))
             return Forbid();
 

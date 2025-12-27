@@ -17,6 +17,7 @@ public class OrderItem
 
     [Column(TypeName = "decimal(18,2)")]
     public decimal UnitPrice { get; set; }
+    public string? ImageUrl { get; set; }
     public Dictionary<string, string> Specifications { get; set; } = new();
 
     public Guid OrderId { get; set; }
