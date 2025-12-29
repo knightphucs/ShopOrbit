@@ -1,93 +1,73 @@
-# Caching Strategy Specification
+# Caching Strategy
 
-## 1. Catalog Service (Read-Heavy)
+This document outlines how ShopOrbit applies caching to reduce PostgreSQL load, improve API latency, and optimize bandwidth.
 
-> The Catalog Service is read-heavy. Caching is applied to reduce PostgreSQL load, improve API response times, and save network bandwidth.
+## 1) Catalog Service (Read‑heavy)
 
-### 1.1 Redis Caching Strategy (Server-Side)
+### 1.1 Redis Caching (Server‑Side)
 
-**Cache Key Patterns**
+Key patterns:
 
-| Cache Key Pattern                               | Description                              |
+| Key Pattern                                     | Description                              |
 | :---------------------------------------------- | :--------------------------------------- |
 | `catalog:product:{id}`                          | Cache a single product detail            |
 | `catalog:products:p{page}_s{size}_filters...`   | Cache product list with paging & filters |
 | `catalog:category:{id}`                         | Cache a single category detail           |
 | `catalog:categories:p{page}_s{size}_filters...` | Cache category list with paging          |
 
-**TTL (Time To Live)**
+TTL:
 
-| Data Type               | TTL        | Reason                                                                                    |
-| :---------------------- | :--------- | :---------------------------------------------------------------------------------------- |
-| Product/Category Detail | 30 minutes | Data changes infrequently.                                                                |
-| Product/Category List   | 2 minutes  | Lists are frequently affected by CRUD operations; short TTL ensures eventual consistency. |
+| Data Type               | TTL        | Reason                                                                   |
+| :---------------------- | :--------- | :----------------------------------------------------------------------- |
+| Product/Category Detail | 30 minutes | Data changes infrequently                                                |
+| Product/Category List   | 2 minutes  | Lists are often affected by CRUD; short TTL ensures eventual consistency |
 
-**Invalidation Strategy**
+Invalidation strategy:
 
-| Operation                   | Invalidation Logic                                                                 |
-| :-------------------------- | :--------------------------------------------------------------------------------- |
-| **Create** Product/Category | List cache is **not** immediately removed. It expires naturally (TTL).             |
-| **Update** Product/Category | Remove specific detail cache (`catalog:product:{id}`). List cache updates via TTL. |
-| **Delete** Product/Category | Remove specific detail cache (`catalog:product:{id}`). List cache updates via TTL. |
+| Operation               | Logic                                                               |
+| :---------------------- | :------------------------------------------------------------------ |
+| Create Product/Category | Do not remove list cache immediately; let it expire naturally (TTL) |
+| Update Product/Category | Remove detail cache (`catalog:product:{id}`); list updates via TTL  |
+| Delete Product/Category | Remove detail cache; list updates via TTL                           |
 
-### 1.2 HTTP Caching (Client-Side)
+### 1.2 HTTP Caching (Client‑Side)
 
-Uses HTTP Headers to allow browsers/proxies to cache responses.
+- Mechanism: ETag (Entity Tag)
+  1. Server generates a content hash (e.g., MD5)
+  2. Client stores the ETag and sends `If-None-Match` on subsequent requests
+  3. If matched → return `304 Not Modified` (no body)
+- Configuration: `Cache-Control: public, max-age=60`, `ETag: "<hash>"`
+- Applied endpoints: `GET /products`, `GET /products/{id}`, `GET /categories`
 
-- **Mechanism**: ETag (Entity Tag).
-  1. Server generates an MD5 hash of the response content.
-  2. Client stores the ETag.
-  3. Subsequent requests send `If-None-Match`.
-  4. If hash matches -> Server returns `304 Not Modified` (No body).
-- **Configuration**:
-  - `Cache-Control: public, max-age=60`
-  - `ETag: "<hash>"`
-- **Applied Endpoints**:
-  - `GET /products`
-  - `GET /products/{id}`
-  - `GET /categories`
+## 2) Basket & Ordering (Transactional State)
 
----
+### 2.1 Basket Service (Redis as primary store)
 
-## 2. Basket & Ordering Services (Transactional State)
+- Purpose: temporary storage for user shopping cart (stateful)
+- Key: `{UserId}` (raw GUID) – the `InstanceName` prefix is removed so Ordering can read directly
+- Data structure: JSON string (serialized `ShoppingCart`)
+- TTL: persist (no automatic expiration; cleared after a successful order)
+- Logic: overwrite entire value on write; read JSON for client responses
 
-This flow uses Redis as the primary storage for the shopping cart state and coordinates between services.
+### 2.2 Ordering Service (Redis reader)
 
-### 2.1 Basket Service (Redis as Primary Store)
+- Purpose: read basket to create secure orders
+- Flow:
+  1. Trigger: `POST /api/orders`
+  2. Extract `UserId` from JWT → read Redis key `{UserId}`
+  3. After persisting to PostgreSQL (`SaveChanges`) → call `RemoveAsync(userId)` to clear the basket
 
-- **Purpose**: Temporary storage for the user's shopping cart (Stateful).
-- **Key Pattern**: `{UserId}` (Raw GUID).
-  - _> Note: The `InstanceName` prefix has been removed in `Program.cs` configuration to ensure the Ordering Service can access this key directly._
-- **Data Structure**: JSON String (Serialized `ShoppingCart` object).
-- **TTL**: Persist (Does not expire automatically; persists until the order is placed).
-- **Logic**:
-  - **Write**: `BasketController` overwrites the entire JSON value.
-  - **Read**: `BasketController` reads the JSON to return to the client.
+## 3) Payment Service (Idempotency)
 
-### 2.2 Ordering Service (Redis Reader)
+- Key: `processed_order_{OrderId}`
+- TTL: 24 hours
+- Logic:
+  - Before processing: if `Get(key)` exists → return immediately (skip duplicate)
+  - After processing: `Set(key, "processed")` to mark transaction complete
 
-- **Purpose**: Retrieve basket data to create an order (ensures price security and data integrity).
-- **Logic**:
-  1. **Trigger**: `POST /api/orders`.
-  2. **Read**: Service extracts `UserId` from the Token -> Reads Redis Key `{UserId}`.
-  3. **Invalidation**: After successfully executing `SaveChanges` to PostgreSQL -> Calls `RemoveAsync(userId)` to clear the shopping cart.
+## 4) Benefits
 
----
-
-## 3. Payment Service (Idempotency)
-
-- **Purpose**: Prevent transaction duplication (Idempotency handling).
-- **Key Pattern**: `processed_order_{OrderId}`
-- **TTL**: 24 hours.
-- **Logic**:
-  - **Before Processing**: Check `Get(key)`. If it exists -> Return immediately (skip processing).
-  - **After Processing**: Call `Set(key, "processed")` to mark the transaction as complete.
-
----
-
-## 4. Summary of Benefits
-
-- **Reduced Database Load**: High-traffic read operations are intercepted by Redis.
-- **Bandwidth Efficiency**: `304 Not Modified` responses prevent sending redundant data.
-- **Data Consistency**: Strategy balances between immediate consistency (Basket) and eventual consistency (Catalog Lists).
-- **Reliability**: Idempotency keys in the Payment service prevent double-charging.
+- Reduced DB load: intercept read‑heavy operations with Redis
+- Bandwidth efficiency: `304 Not Modified` avoids sending redundant bodies
+- Consistency balance: immediate (Basket) vs. eventual (Catalog lists)
+- Reliability: Payment idempotency prevents double‑charging

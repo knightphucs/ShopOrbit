@@ -1,22 +1,23 @@
 # Event Messaging Specification
 
-## 1. Message Broker
+This document describes the event communication across ShopOrbit microservices using RabbitMQ and MassTransit to ensure reliability, scalability, and loose coupling.
 
-- **Technology**: RabbitMQ
-- **Exchange Type**: Fanout (or Topic)
+## 1) Message Broker
 
-## 2. Event Contracts
+- Technology: RabbitMQ
+- Exchange: Fanout or Topic (per flow)
+- Queue: durable, auto‑delete = false
+- Routing key: event‑based (e.g., `catalog.product.created`, `ordering.order.created`)
 
-Business events (Domain Events) emitted across the system.
+## 2) Event Contracts
 
-# Event Messaging Specification – Catalog Service
+Domain events are published when significant changes occur.
 
-> The Catalog Service publishes domain events whenever important data changes occur.
-> These events enable other microservices to stay synchronized in a loosely coupled manner.
+### 2.1 Catalog Service
 
-### `Event Contracts`
+Publishes events for product CRUD operations.
 
-### 3.1 ProductCreatedEvent
+ProductCreatedEvent
 
 ```json
 {
@@ -28,7 +29,7 @@ Business events (Domain Events) emitted across the system.
 }
 ```
 
-### 3.2 ProductUpdatedEvent
+ProductUpdatedEvent
 
 ```json
 {
@@ -38,7 +39,7 @@ Business events (Domain Events) emitted across the system.
 }
 ```
 
-### 3.2 ProductDeletedEvent
+ProductDeletedEvent
 
 ```json
 {
@@ -47,92 +48,93 @@ Business events (Domain Events) emitted across the system.
 }
 ```
 
-### `Potential Consumers`
+Potential consumers:
 
-| Service                 | Purpose                                              |
-| ----------------------- | ---------------------------------------------------- |
-| Ordering Service        | Store product price snapshot during user checkout    |
-| Search Service (future) | Re-index product data in Elasticsearch               |
-| Notification Service    | Notify administrators when products are out of stock |
+| Service                 | Purpose                                        |
+| ----------------------- | ---------------------------------------------- |
+| Ordering Service        | Persist product price snapshot during checkout |
+| Search Service (future) | Re‑index product data in Elasticsearch         |
+| Notification Service    | Alert admins when products are out of stock    |
 
-### `Retry Strategy`
+### 2.2 Ordering Service
 
-The Catalog Service uses MassTransit retry policies to handle transient failures.
-
-```yaml
-Retry: 3 times
-Delay intervals: 2s → 5s → 10s
-Backoff: Incremental
-```
-
-> If all retry attempts fail, the message is moved to a Dead Letter Queue (DLQ) for later inspection.
-
-### `OrderCreatedEvent`
-
-- **Trigger**: When a User successfully places an order in the Ordering Service.
-- **Publisher**: Ordering Service.
-- **Consumers**:
-  - _Email Service_: Send confirmation email.
-  - _Cart Service_: Clear shopping cart.
-- **Payload Format (JSON)**:
-  ```json
-  {
-    "OrderId": "guid-xxx",
-    "UserId": "guid-yyy",
-    "TotalAmount": 150.0,
-    "CreatedAt": "2025-12-01T10:00:00Z"
-  }
-  ```
-
-## 3. Retry Policy
-
-- Uses the **MassTransit** library Retry Policy.
-- **Strategy**: Incremental Retry.
-- **Config**: Retry 3 times, intervals of 2s, 5s, 10s. If it still fails -> Push to Dead Letter Queue (DLQ).
-
-## 4. Implemented Event Saga (Update)
-
-The order processing workflow (Choreography) has been implemented as follows:
-
-### Config RabbitMQ
-
-- **Host:** `shoporbit-rabbitmq` (Docker Network).
-- **Retry Policy:** Incremental (3 times: 2s, 5s, 10s) configured in the `Program.cs` consumer.
-
-### Luồng sự kiện 1: Order Created
-
-- **Trigger:** API `POST /api/orders` successful (Status: Pending).
-- **Publisher:** `Ordering Service`.
-- **Consumer:** `Payment Service` (Class `OrderCreatedConsumer`).
-- **Payload:**
-  ```json
-  {
-    "OrderId": "Guid",
-    "UserId": "Guid",
-    "TotalAmount": decimal,
-    "CreatedAt": "DateTime"
-  }
-  ```
-
-### Luồng sự kiện 2: Payment Succeeded
-
-This is the payment confirmation step to complete the order process (Saga Choreography).
-
-- **Event Name:** `ShopOrbit.BuildingBlocks.Contracts.PaymentSucceededEvent`
-- **Trigger:**
-  - After `Payment Service` successfully processes the `OrderCreatedEvent`.
-  - The payment transaction has been securely saved to the `Payments` table in the Database.
-- **Publisher:** `Payment Service`
-- **Consumer:** `Ordering Service` (Class `PaymentSucceededConsumer`)
-
-#### Data Payload (JSON)
-
-Data sent over RabbitMQ:
+OrderCreatedEvent (when an order is created successfully):
 
 ```json
 {
-  "OrderId": "Guid (ID của đơn hàng gốc)",
-  "PaymentId": "Guid (ID của giao dịch thanh toán vừa tạo)",
-  "ProcessedAt": "DateTime (Thời gian xử lý, UTC)"
+  "OrderId": "guid-xxx",
+  "UserId": "guid-yyy",
+  "TotalAmount": 150.0,
+  "CreatedAt": "2025-12-01T10:00:00Z"
 }
 ```
+
+### 2.3 Payment Service
+
+PaymentSucceededEvent (when payment is processed successfully):
+
+```json
+{
+  "OrderId": "guid-xxx",
+  "PaymentId": "guid-zzz",
+  "ProcessedAt": "2025-12-01T10:15:00Z"
+}
+```
+
+PaymentFailedEvent (optional):
+
+```json
+{
+  "OrderId": "guid-xxx",
+  "Reason": "Insufficient funds",
+  "OccurredAt": "2025-12-01T10:15:30Z"
+}
+```
+
+## 3) Retry Policy & DLQ
+
+- Retries: 3 attempts with incremental backoff (2s → 5s → 10s)
+- On failure: move message to the Dead Letter Queue (DLQ) for inspection/recovery
+
+Example MassTransit configuration in `Program.cs`:
+
+```csharp
+cfg.UseMessageRetry(r => r.Incremental(3, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3)));
+cfg.Publish<PaymentSucceededEvent>(x =>
+{
+    x.Durable = true;
+});
+```
+
+## 4) Saga Choreography (Event Flows)
+
+### Flow 1: Order Created → Payment
+
+- Trigger: Client calls `POST /api/orders` (Pending status)
+- Publisher: Ordering Service
+- Consumer: Payment Service (`OrderCreatedConsumer`)
+- Result: create payment transaction in DB (Payments)
+
+### Flow 2: Payment Succeeded → Finalize Order
+
+- Event: `PaymentSucceededEvent`
+- Publisher: Payment Service
+- Consumer: Ordering Service (`PaymentSucceededConsumer`)
+- Result: update order status to Completed, optionally notify/email
+
+### Flow 3 (optional): Payment Failed → Cancel Order
+
+- Event: `PaymentFailedEvent`
+- Consumer: Ordering Service
+- Result: mark order as Cancelled, restore stock if applicable
+
+## 5) Naming & Observability
+
+- Exchange/Queue: domain prefixes (`catalog.*`, `ordering.*`, `payment.*`)
+- Routing key: event types (`*.created`, `*.updated`, `*.deleted`, `*.succeeded`, `*.failed`)
+- Observability: enable consumer metrics/logs; monitor DLQ; trace with `CorrelationId`
+
+## 6) References
+
+- Shared event contracts: `src/BuildingBlocks/ShopOrbit.BuildingBlocks/Contracts/*`
+- RabbitMQ host: environment var `RabbitMQ__Host` (e.g., `shoporbit-rabbitmq`)

@@ -1,260 +1,136 @@
-# ShopOrbit - Microservices E-commerce Platform
+# ShopOrbit – Microservices E‑commerce Platform (.NET 8)
 
-ShopOrbit is a scalable E-commerce backend system built with **.NET 8 Microservices Architecture**. This project demonstrates advanced concepts such as Authentication/Authorization, Distributed Caching, Event-Driven Architecture, and API Gateway implementation.
+ShopOrbit is a backend E‑commerce system built with a **.NET 8 microservices architecture**, designed for scalability, resilience, and clear service boundaries. It demonstrates authentication/authorization (JWT + Identity), distributed caching (Redis), event‑driven communication (RabbitMQ + MassTransit), and an API Gateway (YARP), containerized with Docker.
 
 ## 🚀 Tech Stack
 
-- **Framework:** .NET 8 (ASP.NET Core Web API)
-- **Database:** PostgreSQL (Entity Framework Core Code-First)
-- **Caching:** Redis (Distributed Cache)
-- **Messaging:** RabbitMQ (via MassTransit)
-- **API Gateway:** YARP (Yet Another Reverse Proxy)
-- **Containerization:** Docker & Docker Compose
-- **Authentication:** JWT (JSON Web Token) & ASP.NET Core Identity
+- Framework: .NET 8 (ASP.NET Core Web API)
+- Database: PostgreSQL (EF Core Code‑First)
+- Caching: Redis (Distributed Cache)
+- Messaging: RabbitMQ (MassTransit)
+- API Gateway: YARP (Yet Another Reverse Proxy)
+- Containerization: Docker & Docker Compose
+- Authentication: JWT + ASP.NET Core Identity
 
 ## 🏗 Architecture Overview
 
-The system is composed of the following microservices:
+Primary microservices and infrastructure:
 
-| Service              | Port   | Description                                             |
-| :------------------- | :----- | :------------------------------------------------------ |
-| **API Gateway**      | `5000` | Single entry point. Handles routing and JWT validation. |
-| **Identity Service** | `5051` | Manages Users, Roles, and JWT Token issuance.           |
-| **Catalog Service**  | `5052` | Manages Products. Implements Redis Caching & ETag.      |
-| **Ordering Service** | `5053` | Handles Orders. Publishes events to RabbitMQ.           |
-| **PostgreSQL**       | `5432` | Primary Database.                                       |
-| **Redis**            | `6379` | Cache Store.                                            |
-| **RabbitMQ**         | `5672` | Message Broker.                                         |
+| Service          | Port  | Description                                                         |
+| :--------------- | :---- | :------------------------------------------------------------------ |
+| API Gateway      | 5000  | Single entry point; routing and JWT validation                      |
+| Identity Service | 5051  | Manages users/roles; issues JWT                                     |
+| Catalog Service  | 5052  | Product management; Redis cache + HTTP ETag                         |
+| Ordering Service | 5053  | Order processing; publishes events to RabbitMQ                      |
+| Payment Service  | (cfg) | Payment processing; publishes/consumes events (port in appsettings) |
+| PostgreSQL       | 5432  | Primary database                                                    |
+| Redis            | 6379  | Distributed cache                                                   |
+| RabbitMQ         | 5672  | Message broker                                                      |
 
----
+Note: The Payment Service port is configured in `appsettings.json`/`launchSettings.json`.
 
-## 🛠 Getting Started
+## 📦 Repository Structure
 
-### Prerequisites
+- `src/BuildingBlocks/ShopOrbit.BuildingBlocks`: shared contracts, proto files, common building blocks
+- `src/Gateways/ShopOrbit.Gateway`: API Gateway (YARP)
+- `src/Services/*`: microservices (Basket, Catalog, Identity, Ordering, Payment)
+- `ui/`: Frontend app (Next.js/TypeScript)
+- `docs/`: project docs (caching, events, security)
+- `docker-compose.yml`: infrastructure containers for Postgres/Redis/RabbitMQ and services
+- `start-all.ps1`: convenience script to start services
 
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- [Visual Studio Code](https://code.visualstudio.com/) or Visual Studio 2022
+## 🛠 Prerequisites
 
-### 1. Clone the Repository
+- .NET 8 SDK
+- Docker Desktop
+- VS Code or Visual Studio 2022
 
-```bash
-git clone https://github.com/your-username/ShopOrbit.git
-cd ShopOrbit
-```
-
-### 2. Start Infrastucture
+## ⚙️ Bootstrap Infrastructure
 
 ```bash
 docker-compose up -d
 ```
 
-### 3. Add-Migrations
+Quick checks:
+
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+- RabbitMQ Management UI (if enabled): `http://localhost:15672`
+
+## 🗃️ EF Core Migrations & Database Update
+
+Create migrations per service (once on init or when schema changes):
 
 ```bash
 dotnet ef migrations add InitialCreate --project src/Services/Identity/ShopOrbit.Identity.API/ShopOrbit.Identity.API.csproj
 dotnet ef migrations add InitialCreate --project src/Services/Catalog/ShopOrbit.Catalog.API/ShopOrbit.Catalog.API.csproj
 dotnet ef migrations add InitialCreate --project src/Services/Ordering/ShopOrbit.Ordering.API/ShopOrbit.Ordering.API.csproj
 dotnet ef migrations add InitialCreate --project src/Services/Payment/ShopOrbit.Payments.API/ShopOrbit.Payments.API.csproj
+```
 
-# Identity Service
+Update databases:
+
+```bash
 dotnet ef database update --project src/Services/Identity/ShopOrbit.Identity.API
-
-# Catalog Service
 dotnet ef database update --project src/Services/Catalog/ShopOrbit.Catalog.API
-
-# Ordering Service
 dotnet ef database update --project src/Services/Ordering/ShopOrbit.Ordering.API
-
-# Payment Service
 dotnet ef database update --project src/Services/Payment/ShopOrbit.Payments.API
 ```
 
-### 4. Run all services
+## ▶️ Run Services
+
+Start everything via PowerShell script:
 
 ```bash
 ./start-all.ps1
-
-All services has deployed to Docker -> just run "docker-compose up -d"
 ```
 
-DO $$
-  DECLARE DropDb INT := 1; -- Set this to 0 to skip DROP statements, 1 to include them
-BEGIN
-  IF DropDb = 1 THEN
-    SET client_min_messages = WARNING;
-    DROP TABLE IF EXISTS qrtz_fired_triggers;
-    DROP TABLE IF EXISTS qrtz_paused_trigger_grps;
-    DROP TABLE IF EXISTS qrtz_scheduler_state;
-    DROP TABLE IF EXISTS qrtz_locks;
-    DROP TABLE IF EXISTS qrtz_simprop_triggers;
-    DROP TABLE IF EXISTS qrtz_simple_triggers;
-    DROP TABLE IF EXISTS qrtz_cron_triggers;
-    DROP TABLE IF EXISTS qrtz_blob_triggers;
-    DROP TABLE IF EXISTS qrtz_triggers;
-    DROP TABLE IF EXISTS qrtz_job_details;
-    DROP TABLE IF EXISTS qrtz_calendars;
-    SET client_min_messages = NOTICE;
-  END IF;
-END $$;
+Or run services individually:
 
-CREATE TABLE qrtz_job_details
-(
-sched_name TEXT NOT NULL,
-job_name TEXT NOT NULL,
-job_group TEXT NOT NULL,
-description TEXT NULL,
-job_class_name TEXT NOT NULL,
-is_durable BOOL NOT NULL,
-is_nonconcurrent BOOL NOT NULL,
-is_update_data BOOL NOT NULL,
-requests_recovery BOOL NOT NULL,
-job_data BYTEA NULL,
-PRIMARY KEY (sched_name, job_name, job_group)
-);
+```bash
+dotnet run --project src/Gateways/ShopOrbit.Gateway/ShopOrbit.Gateway.csproj
+dotnet run --project src/Services/Identity/ShopOrbit.Identity.API/ShopOrbit.Identity.API.csproj
+dotnet run --project src/Services/Catalog/ShopOrbit.Catalog.API/ShopOrbit.Catalog.API.csproj
+dotnet run --project src/Services/Ordering/ShopOrbit.Ordering.API/ShopOrbit.Ordering.API.csproj
+dotnet run --project src/Services/Payment/ShopOrbit.Payments.API/ShopOrbit.Payments.API.csproj
+```
 
-CREATE TABLE qrtz_triggers
-(
-sched_name TEXT NOT NULL,
-trigger_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-job_name TEXT NOT NULL,
-job_group TEXT NOT NULL,
-description TEXT NULL,
-next_fire_time BIGINT NULL,
-prev_fire_time BIGINT NULL,
-priority INTEGER NULL,
-trigger_state TEXT NOT NULL,
-trigger_type TEXT NOT NULL,
-start_time BIGINT NOT NULL,
-end_time BIGINT NULL,
-calendar_name TEXT NULL,
-misfire_instr SMALLINT NULL,
-job_data BYTEA NULL,
-PRIMARY KEY (sched_name, trigger_name, trigger_group),
-FOREIGN KEY (sched_name, job_name, job_group)
-REFERENCES qrtz_job_details (sched_name, job_name, job_group)
-);
+## 🌐 Frontend (UI)
 
-CREATE TABLE qrtz_simple_triggers
-(
-sched_name TEXT NOT NULL,
-trigger_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-repeat_count BIGINT NOT NULL,
-repeat_interval BIGINT NOT NULL,
-times_triggered BIGINT NOT NULL,
-PRIMARY KEY (sched_name, trigger_name, trigger_group),
-FOREIGN KEY (sched_name, trigger_name, trigger_group)
-REFERENCES qrtz_triggers (sched_name, trigger_name, trigger_group)
-ON DELETE CASCADE
-);
+```bash
+cd ui
+npm install
+npm run dev
+```
 
-CREATE TABLE qrtz_simprop_triggers
-(
-sched_name TEXT NOT NULL,
-trigger_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-str_prop_1 TEXT NULL,
-str_prop_2 TEXT NULL,
-str_prop_3 TEXT NULL,
-int_prop_1 INTEGER NULL,
-int_prop_2 INTEGER NULL,
-long_prop_1 BIGINT NULL,
-long_prop_2 BIGINT NULL,
-dec_prop_1 NUMERIC NULL,
-dec_prop_2 NUMERIC NULL,
-bool_prop_1 BOOL NULL,
-bool_prop_2 BOOL NULL,
-time_zone_id TEXT NULL,
-PRIMARY KEY (sched_name, trigger_name, trigger_group),
-FOREIGN KEY (sched_name, trigger_name, trigger_group)
-REFERENCES qrtz_triggers (sched_name, trigger_name, trigger_group)
-ON DELETE CASCADE
-);
+The UI uses Next.js/TypeScript and connects via the API Gateway (`http://localhost:5000`).
 
-CREATE TABLE qrtz_cron_triggers
-(
-sched_name TEXT NOT NULL,
-trigger_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-cron_expression TEXT NOT NULL,
-time_zone_id TEXT,
-PRIMARY KEY (sched_name, trigger_name, trigger_group),
-FOREIGN KEY (sched_name, trigger_name, trigger_group)
-REFERENCES qrtz_triggers (sched_name, trigger_name, trigger_group)
-ON DELETE CASCADE
-);
+## 🔐 Key Environment Variables
 
-CREATE TABLE qrtz_blob_triggers
-(
-sched_name TEXT NOT NULL,
-trigger_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-blob_data BYTEA NULL,
-PRIMARY KEY (sched_name, trigger_name, trigger_group),
-FOREIGN KEY (sched_name, trigger_name, trigger_group)
-REFERENCES qrtz_triggers (sched_name, trigger_name, trigger_group)
-ON DELETE CASCADE
-);
+- `ConnectionStrings__Default`: PostgreSQL connection string
+- `Redis__ConnectionString`: Redis address
+- `RabbitMQ__Host`: RabbitMQ host (e.g., `shoporbit-rabbitmq` in Docker network)
+- `JwtSettings__Secret`: secret key for JWT signing
+- `JwtSettings__Issuer`, `JwtSettings__Audience`, `JwtSettings__ExpiresMinutes`: token configuration
 
-CREATE TABLE qrtz_calendars
-(
-sched_name TEXT NOT NULL,
-calendar_name TEXT NOT NULL,
-calendar BYTEA NOT NULL,
-PRIMARY KEY (sched_name, calendar_name)
-);
+## 🧠 Design Principles
 
-CREATE TABLE qrtz_paused_trigger_grps
-(
-sched_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-PRIMARY KEY (sched_name, trigger_group)
-);
+- Service boundaries with event‑driven communication
+- Read‑heavy caching (Catalog) + HTTP ETag to reduce bandwidth
+- Secure ordering: server reads basket from Redis, ignores client‑provided prices
+- Payment idempotency: key `processed_order_{OrderId}` (TTL 24h)
 
-CREATE TABLE qrtz_fired_triggers
-(
-sched_name TEXT NOT NULL,
-entry_id TEXT NOT NULL,
-trigger_name TEXT NOT NULL,
-trigger_group TEXT NOT NULL,
-instance_name TEXT NOT NULL,
-fired_time BIGINT NOT NULL,
-sched_time BIGINT NOT NULL,
-priority INTEGER NOT NULL,
-state TEXT NOT NULL,
-job_name TEXT NULL,
-job_group TEXT NULL,
-is_nonconcurrent BOOL NOT NULL,
-requests_recovery BOOL NULL,
-PRIMARY KEY (sched_name, entry_id)
-);
+## 🧰 Troubleshooting
 
-CREATE TABLE qrtz_scheduler_state
-(
-sched_name TEXT NOT NULL,
-instance_name TEXT NOT NULL,
-last_checkin_time BIGINT NOT NULL,
-checkin_interval BIGINT NOT NULL,
-PRIMARY KEY (sched_name, instance_name)
-);
+- Postgres connection issues: verify `postgres` container, firewall, and `ConnectionStrings__Default`
+- Redis not responding: check `redis` container and Docker network
+- RabbitMQ auth errors: ensure correct user/pass or mount default config
+- Migration errors: delete project `bin/obj` folders and recreate migrations
 
-CREATE TABLE qrtz_locks
-(
-sched_name TEXT NOT NULL,
-lock_name TEXT NOT NULL,
-PRIMARY KEY (sched_name, lock_name)
-);
+## 📚 Related Docs
 
-CREATE INDEX idx_qrtz_j_req_recovery ON qrtz_job_details (requests_recovery);
-CREATE INDEX idx_qrtz_t_next_fire_time ON qrtz_triggers (next_fire_time);
-CREATE INDEX idx_qrtz_t_state ON qrtz_triggers (trigger_state);
-CREATE INDEX idx_qrtz_t_nft_st ON qrtz_triggers (next_fire_time, trigger_state);
-CREATE INDEX idx_qrtz_ft_trig_name ON qrtz_fired_triggers (trigger_name);
-CREATE INDEX idx_qrtz_ft_trig_group ON qrtz_fired_triggers (trigger_group);
-CREATE INDEX idx_qrtz_ft_trig_nm_gp ON qrtz_fired_triggers (sched_name, trigger_name, trigger_group);
-CREATE INDEX idx_qrtz_ft_trig_inst_name ON qrtz_fired_triggers (instance_name);
-CREATE INDEX idx_qrtz_ft_job_name ON qrtz_fired_triggers (job_name);
-CREATE INDEX idx_qrtz_ft_job_group ON qrtz_fired_triggers (job_group);
-CREATE INDEX idx_qrtz_ft_job_req_recovery ON qrtz_fired_triggers (requests_recovery);
+- Caching: see `docs/caching-plan.md`
+- Events: see `docs/events.md`
+- Security: see `docs/security-spec.md`
+- Consistency & Outbox: see `docs/consistency.md`
+- Setup & Testing: see `docs/runbook.md` (includes Quartz schema setup)
