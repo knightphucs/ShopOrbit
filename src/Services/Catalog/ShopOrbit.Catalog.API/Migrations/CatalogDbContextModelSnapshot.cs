@@ -216,16 +216,30 @@ namespace ShopOrbit.Catalog.API.Migrations
                         new
                         {
                             Id = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
-                            Description = "Mobile devices",
+                            Description = "High-end mobile devices and flagship smartphones",
                             Name = "Smartphones",
-                            Updated_At = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                            Updated_At = new DateTime(2025, 12, 30, 11, 39, 20, 433, DateTimeKind.Utc).AddTicks(2024)
                         },
                         new
                         {
                             Id = new Guid("b4d2f2f5-6c7e-5d3f-8a2f-2f2f2f2f2f2f"),
-                            Description = "Portable computers",
+                            Description = "High-performance portable computers and MacBooks",
                             Name = "Laptops",
-                            Updated_At = new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                            Updated_At = new DateTime(2025, 12, 30, 11, 39, 20, 433, DateTimeKind.Utc).AddTicks(2144)
+                        },
+                        new
+                        {
+                            Id = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "Mechanical keyboards and accessories",
+                            Name = "Keyboards",
+                            Updated_At = new DateTime(2025, 12, 30, 11, 39, 20, 433, DateTimeKind.Utc).AddTicks(2146)
+                        },
+                        new
+                        {
+                            Id = new Guid("d6e4f4a7-8b9c-6d4e-1f3a-4f4f4f4f4f4f"),
+                            Description = "All-in-One computers and workstations",
+                            Name = "Desktops",
+                            Updated_At = new DateTime(2025, 12, 30, 11, 39, 20, 433, DateTimeKind.Utc).AddTicks(2147)
                         });
                 });
 
@@ -268,21 +282,201 @@ namespace ShopOrbit.Catalog.API.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("d28888e9-2ba9-473a-a40f-e38cb54f9b35"),
+                            Id = new Guid("8bfea9f3-f81b-4ba6-a56c-ee473e276078"),
                             CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
-                            Name = "iPhone 15 Pro",
+                            Description = "Durable titanium design, featuring the A17 Pro chip.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1766818588/tiz3if51ilnx4yudd6ci.png",
+                            Name = "iPhone 15 Pro Black Titanium",
                             Price = 999m,
-                            Specifications = new Dictionary<string, string> { ["Color"] = "Titanium Black", ["Storage"] = "256GB", ["Screen"] = "6.1 inch" },
+                            Specifications = new Dictionary<string, string> { ["Display"] = "6.1 inch Super Retina XDR", ["Processor"] = "A17 Pro", ["RAM"] = "8GB", ["Storage"] = "128GB", ["Color"] = "Black Titanium" },
+                            StockQuantity = 50
+                        },
+                        new
+                        {
+                            Id = new Guid("5c228d2e-6840-4181-8c82-867a324fbcd2"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "Raw titanium beauty with a professional-grade 48MP camera system.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1766821222/iphone-15-pro-titan-halo_vkcmpu.png",
+                            Name = "iPhone 15 Pro Natural Titanium",
+                            Price = 1099m,
+                            Specifications = new Dictionary<string, string> { ["Display"] = "6.1 inch Super Retina XDR", ["Storage"] = "256GB", ["Color"] = "Natural Titanium" },
+                            StockQuantity = 35
+                        },
+                        new
+                        {
+                            Id = new Guid("4e4097cf-3f33-4607-8391-f10c63ac032a"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "Future technology breakthrough with an infinite bezel-less display.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1766823636/sa8t0adigwdyqnsgj2n8.png",
+                            Name = "iPhone 17 Pro Max Ultra",
+                            Price = 1499m,
+                            Specifications = new Dictionary<string, string> { ["Display"] = "6.9 inch Ultra Motion", ["Processor"] = "A19 Bionic", ["Camera"] = "Quad 64MP System" },
+                            StockQuantity = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("05b828e9-0c7c-4856-bed7-e4de975434ed"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "The world's thinnest smartphone, designed for the modern minimalist.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1766823963/joll2fcyaslrkksooemw.png",
+                            Name = "iPhone Air Slim",
+                            Price = 899m,
+                            Specifications = new Dictionary<string, string> { ["Thickness"] = "5.5mm", ["Weight"] = "140g", ["Display"] = "6.1 inch OLED" },
                             StockQuantity = 100
                         },
                         new
                         {
-                            Id = new Guid("da2fd609-d754-4feb-8acd-c4f9ff13ba96"),
+                            Id = new Guid("16cba8b0-d37f-43b5-993f-30ddfb5d64f1"),
                             CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
-                            Name = "Samsung Galaxy S24",
-                            Price = 899m,
-                            Specifications = new Dictionary<string, string> { ["CPU"] = "M3 Pro", ["RAM"] = "18GB", ["SSD"] = "512GB" },
+                            Description = "Large display, impressive battery life, and vibrant colors.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1766824071/ufhvv71ghkatibm4jwci.png",
+                            Name = "iPhone 17 Plus",
+                            Price = 999m,
+                            Specifications = new Dictionary<string, string> { ["Display"] = "6.7 inch Super Retina", ["Processor"] = "A18", ["Charging"] = "45W USB-C" },
+                            StockQuantity = 60
+                        },
+                        new
+                        {
+                            Id = new Guid("05408272-9aa5-4bee-887b-3075025d17be"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "Experience the next generation of connectivity.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767089907/iphone16e_llslov.png",
+                            Name = "iPhone 16E Air",
+                            Price = 949m,
+                            Specifications = new Dictionary<string, string> { ["Display"] = "6.3 inch OLED", ["Processor"] = "A18 Pro", ["Features"] = "Action Button" },
+                            StockQuantity = 45
+                        },
+                        new
+                        {
+                            Id = new Guid("4d4a154f-f928-4181-8e74-f1106e835a96"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "Next-generation foldable with slimmer hinge and powerful AI features.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767093399/samsung-galaxy-z-fold7-black-1_zif2q4.png",
+                            Name = "Samsung Galaxy Z Fold 7",
+                            Price = 1799m,
+                            Specifications = new Dictionary<string, string> { ["Main Display"] = "7.6 inch Dynamic AMOLED 2X", ["Cover Display"] = "6.3 inch", ["Processor"] = "Snapdragon 8 Gen 4", ["RAM"] = "12GB", ["Color"] = "Phantom Black" },
+                            StockQuantity = 15
+                        },
+                        new
+                        {
+                            Id = new Guid("ae744e56-edcc-47a5-b99f-5c3818780240"),
+                            CategoryId = new Guid("a3c1e1f4-5b6d-4c2e-9f1e-1f1e1f1e1f1e"),
+                            Description = "Galaxy AI is here. Epic design and powerful performance.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1766818601/ymsdwjh5iy5dcipdsntt.jpg",
+                            Name = "Samsung Galaxy S24 Cream",
+                            Price = 799m,
+                            Specifications = new Dictionary<string, string> { ["Display"] = "6.2 inch FHD+", ["Processor"] = "Exynos 2400 / Snapdragon 8 Gen 3", ["RAM"] = "8GB", ["Color"] = "Cream" },
+                            StockQuantity = 80
+                        },
+                        new
+                        {
+                            Id = new Guid("14557cd6-bb6f-417d-bb3c-1e12e6cb435d"),
+                            CategoryId = new Guid("b4d2f2f5-6c7e-5d3f-8a2f-2f2f2f2f2f2f"),
+                            Description = "Supercharged by M4. Lean. Mean. M4 machine.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767093810/macbook-air-13-inch-m4-16gb-256gb-blackblue-removebg-preview_jamr6z.png",
+                            Name = "MacBook Air 13 M4",
+                            Price = 1099m,
+                            Specifications = new Dictionary<string, string> { ["Chip"] = "Apple M4", ["Memory"] = "16GB Unified", ["Storage"] = "256GB SSD", ["Display"] = "13.6 inch Liquid Retina", ["Color"] = "Midnight" },
                             StockQuantity = 50
+                        },
+                        new
+                        {
+                            Id = new Guid("6384ca25-7a5d-42d6-a069-4b0af3f4b209"),
+                            CategoryId = new Guid("b4d2f2f5-6c7e-5d3f-8a2f-2f2f2f2f2f2f"),
+                            Description = "Mind-blowing. Head-turning. The ultimate pro laptop.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767093814/macbook-pro-14-inch-m4-pro-black-removebg-preview_tjnqvr.png",
+                            Name = "MacBook Pro 14 M4 Pro",
+                            Price = 1999m,
+                            Specifications = new Dictionary<string, string> { ["Chip"] = "Apple M4 Pro", ["Memory"] = "18GB Unified", ["Display"] = "14.2 inch Liquid Retina XDR", ["Color"] = "Space Black" },
+                            StockQuantity = 20
+                        },
+                        new
+                        {
+                            Id = new Guid("39b4bd8a-6715-4304-a48c-46029558db42"),
+                            CategoryId = new Guid("b4d2f2f5-6c7e-5d3f-8a2f-2f2f2f2f2f2f"),
+                            Description = "Impressively big. Impossibly thin.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767093816/macbook-air-15-inch-m4-color-gold-removebg-preview_qb2u2m.png",
+                            Name = "MacBook Air 15 M4",
+                            Price = 1299m,
+                            Specifications = new Dictionary<string, string> { ["Chip"] = "Apple M4", ["Display"] = "15.3 inch Liquid Retina", ["Memory"] = "16GB Unified", ["Color"] = "Starlight Gold" },
+                            StockQuantity = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("e0dea770-2307-4c72-8707-f8cdc5db01fb"),
+                            CategoryId = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "Wooden mechanical keyboard with multi-mode connectivity.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767089822/149_AKKO_MU02_Mountain_Seclusion_Multi-Modes_zzhjao.png",
+                            Name = "Akko MU02 Mountain Seclusion",
+                            Price = 120m,
+                            Specifications = new Dictionary<string, string> { ["Material"] = "Walnut Wood", ["Switches"] = "Akko V3 Piano Pro", ["Layout"] = "65%" },
+                            StockQuantity = 25
+                        },
+                        new
+                        {
+                            Id = new Guid("f0e51585-fab8-4068-b8c5-274a51c0bc9e"),
+                            CategoryId = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "Gasket mount mechanical keyboard with transparent acrylic case.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767089836/89_AKKO_5075B_Plus_Transparent_ASA_White_cal5fb.png",
+                            Name = "Akko 5075B Plus Transparent",
+                            Price = 95m,
+                            Specifications = new Dictionary<string, string> { ["Structure"] = "Gasket Mount", ["Lighting"] = "SMD LED RGB" },
+                            StockQuantity = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("b07e3c70-4649-4c02-8908-4ee012639833"),
+                            CategoryId = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "High-performance gaming mechanical keyboard.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767089840/AULA_F75_MAX_%C4%90EN_z8gche.png",
+                            Name = "Aula F75 Max Black",
+                            Price = 75m,
+                            Specifications = new Dictionary<string, string> { ["Layout"] = "75%", ["Polling Rate"] = "1000Hz" },
+                            StockQuantity = 100
+                        },
+                        new
+                        {
+                            Id = new Guid("6b914544-3ed1-46b1-8b2d-207d4446048f"),
+                            CategoryId = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "Customized mechanical keyboard for enthusiasts.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767089854/kb_aula_c7skwy.png",
+                            Name = "Aula Custom Edition",
+                            Price = 85m,
+                            Specifications = new Dictionary<string, string> { ["Switches"] = "Leobog Reaper", ["Sound"] = "Thocky" },
+                            StockQuantity = 15
+                        },
+                        new
+                        {
+                            Id = new Guid("a1eba2b6-0a9c-421b-83de-af1c077b04bf"),
+                            CategoryId = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "The smoothest low-profile mechanical keyboard with Gasket Mount.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767093176/ban-phim-co-lofree-flow-84-key-white-removebg-preview_jcrb9f.png",
+                            Name = "Lofree Flow 84 White",
+                            Price = 159m,
+                            Specifications = new Dictionary<string, string> { ["Type"] = "Low Profile", ["Switches"] = "Kailh Phantom (Ghost)", ["Material"] = "Aluminum", ["Color"] = "White" },
+                            StockQuantity = 30
+                        },
+                        new
+                        {
+                            Id = new Guid("fefa28f1-69bd-466b-b375-3ffc3a2b2a6f"),
+                            CategoryId = new Guid("c5d3e3f6-7a8b-5c3d-0e2f-3f3f3f3f3f3f"),
+                            Description = "Classic high-end mechanical keyboard known for durability and typing feel.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767093181/B%C3%A0n-ph%C3%ADm-Leopold-FC900R-BT-MX2A-Graphite---Blue-Font-removebg-preview_bt94kl.png",
+                            Name = "Leopold FC900R BT Graphite",
+                            Price = 140m,
+                            Specifications = new Dictionary<string, string> { ["Switches"] = "Cherry MX2A", ["Keycaps"] = "1.5mm PBT Double-shot", ["Connectivity"] = "Bluetooth 5.1 / Wired", ["Layout"] = "Full-size" },
+                            StockQuantity = 20
+                        },
+                        new
+                        {
+                            Id = new Guid("f80f3800-425e-460c-bbea-b7aa1770fdb9"),
+                            CategoryId = new Guid("d6e4f4a7-8b9c-6d4e-1f3a-4f4f4f4f4f4f"),
+                            Description = "The world's best all-in-one computer.",
+                            ImageUrl = "https://res.cloudinary.com/dwhgdtdli/image/upload/v1767089860/imac_m8bljd.png",
+                            Name = "iMac 24-inch M3",
+                            Price = 1299m,
+                            Specifications = new Dictionary<string, string> { ["Processor"] = "Apple M3", ["Display"] = "24-inch 4.5K Retina", ["Color"] = "Blue" },
+                            StockQuantity = 20
                         });
                 });
 
