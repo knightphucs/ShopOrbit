@@ -13,7 +13,7 @@ The Catalog Service uses a **Cache-Aside** pattern combined with **Active Invali
 | Key Pattern                                       | Description                                                          |
 | :------------------------------------------------ | :------------------------------------------------------------------- |
 | `catalog:product:{id}`                            | Cache a single product detail (Entity).                              |
-| `catalog:products:p{page}_s{size}_{filters}...`   | Cache product lists with specific pagination, sorting, and filtering 
+| `catalog:products:p{page}_s{size}_{filters}...`   | Cache product lists with specific pagination, sorting, and filtering |
 |                                                   | parameters (e.g., `minPrice`, `maxPrice`, `categoryId`, `search`).   |
 | `catalog:category:{id}`                           | Cache a single category detail.                                      |
 | `catalog:categories:p{page}_s{size}_{filters}...` | Cache category lists with pagination and filters.                    |
@@ -36,8 +36,8 @@ Unlike standard TTL-only approaches, ShopOrbit implements **Active Invalidation*
 |                               |                                        | cached pages and filter results.                                           |
 | **Update** Product/Category   | **Detail Removal + List Invalidation** | Removes the specific entity key (`catalog:product:{id}`) **AND** clears    |
 |                               |                                        | all list caches matching the pattern.                                      |
-| **Delete** Product/Category   | **Detail Removal + List Invalidation** | Same as Update; ensures the deleted item disappears from both details and  
-                                                                           lists immediately.                                                         |
+| **Delete** Product/Category   | **Detail Removal + List Invalidation** | Same as Update; ensures the deleted item disappears from both details and  |
+|                               |                                        | lists immediately.                                                         |
 
 ### 1.2 Technical Implementation Details
 
