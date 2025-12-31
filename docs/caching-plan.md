@@ -13,8 +13,8 @@ The Catalog Service uses a **Cache-Aside** pattern combined with **Active Invali
 | Key Pattern                                       | Description                                                          |
 | :------------------------------------------------ | :------------------------------------------------------------------- |
 | `catalog:product:{id}`                            | Cache a single product detail (Entity).                              |
-| `catalog:products:p{page}_s{size}_{filters}...`   | Cache product lists with specific pagination, sorting, and filtering |
-|                                                     parameters (e.g., `minPrice`, `maxPrice`, `categoryId`, `search`).   |
+| `catalog:products:p{page}_s{size}_{filters}...`   | Cache product lists with specific pagination, sorting, and filtering 
+|                                                   | parameters (e.g., `minPrice`, `maxPrice`, `categoryId`, `search`).   |
 | `catalog:category:{id}`                           | Cache a single category detail.                                      |
 | `catalog:categories:p{page}_s{size}_{filters}...` | Cache category lists with pagination and filters.                    |
 
@@ -24,7 +24,7 @@ The Catalog Service uses a **Cache-Aside** pattern combined with **Active Invali
 | :----------------------- | :---------------- | :-------------------------------------------------------------------------------- |
 | Product/Category Detail  | **10-30 minutes** | Detailed information changes infrequently.                                        |
 | Product/Category List    | **2 minutes**     | Lists are highly volatile. Short TTL ensures eventual consistency if invalidation |
-|                                                misses, while Active Invalidation handles immediate updates.                      |
+|                          |                   |  misses, while Active Invalidation handles immediate updates.                     |
 
 **Invalidation Strategy (Consistency):**
 
@@ -33,11 +33,11 @@ Unlike standard TTL-only approaches, ShopOrbit implements **Active Invalidation*
 | Operation                     | Strategy                               | Implementation Logic                                                       |
 | :---------------------------- | :------------------------------------- | :------------------------------------------------------------------------- |
 | **Create** Product/Category   | **Immediate List Invalidation**        | Calls `InvalidateCachePattern("catalog:products*")` to remove **all**      |
-|                                                                          cached pages and filter results.                                           |
+|                               |                                        | cached pages and filter results.                                           |
 | **Update** Product/Category   | **Detail Removal + List Invalidation** | Removes the specific entity key (`catalog:product:{id}`) **AND** clears    |
-|                                                                          all list caches matching the pattern.                                      |
-| **Delete** Product/Category   | **Detail Removal + List Invalidation** | Same as Update; ensures the deleted item disappears from both details and  |
-|                                                                          lists immediately.                                                         |
+|                               |                                        | all list caches matching the pattern.                                      |
+| **Delete** Product/Category   | **Detail Removal + List Invalidation** | Same as Update; ensures the deleted item disappears from both details and  
+                                                                           lists immediately.                                                         |
 
 ### 1.2 Technical Implementation Details
 
