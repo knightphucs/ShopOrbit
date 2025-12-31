@@ -113,25 +113,35 @@ var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
 ### Catalog Service
 
-| Resource   | Method | Endpoint               | Role             |
-| :--------- | :----: | :--------------------- | :--------------- |
-| Products   |  GET   | `/api/products`        | User/Staff/Admin |
-|            |  GET   | `/api/products/{id}`   | User/Staff/Admin |
-|            |  POST  | `/api/products`        | Admin            |
-|            |  PUT   | `/api/products/{id}`   | Admin            |
-|            | DELETE | `/api/products/{id}`   | Admin            |
-| Categories |  GET   | `/api/categories`      | User/Staff/Admin |
-|            |  GET   | `/api/categories/{id}` | User/Staff/Admin |
-|            |  POST  | `/api/categories`      | Admin            |
-|            |  PUT   | `/api/categories/{id}` | Admin            |
-|            | DELETE | `/api/categories/{id}` | Admin            |
+| Resource   | Method | Endpoint                  | Role             |
+| :--------- | :----: | :------------------------ | :--------------- |
+| Products   |  GET   | `/api/v1/products`        | User/Staff/Admin |
+|            |  GET   | `/api/v1/products/{id}`   | User/Staff/Admin |
+|            |  POST  | `/api/v1/products`        | Admin            |
+|            |  PUT   | `/api/v1/products/{id}`   | Admin            |
+|            | DELETE | `/api/v1/products/{id}`   | Admin            |
+| Categories |  GET   | `/api/v1/categories`      | User/Staff/Admin |
+|            |  GET   | `/api/v1/categories/{id}` | User/Staff/Admin |
+|            |  POST  | `/api/v1/categories`      | Admin            |
+|            |  PUT   | `/api/v1/categories/{id}` | Admin            |
+|            | DELETE | `/api/v1/categories/{id}` | Admin            |
 
 ### Ordering Service
 
-| Endpoint      | Method | Role        | Description       |
-| :------------ | :----: | :---------- | :---------------- |
-| `/api/orders` |  GET   | Admin/Staff | View all orders   |
-| `/api/orders` |  POST  | User        | Place a new order |
+| Endpoint                   | Method | Role        | Description       |
+| :------------------------- | :----: | :---------- | :---------------- |
+| `/api/v1/orders`           |  GET   | Admin/Staff | View all orders   |
+| `/api/v1/orders/my-orders` |  GET   | User        | View own history  |
+| `/api/v1/orders`           |  POST  | User        | Place a new order |
+| `/api/v1/orders/{id}`      |  GET   | User/Admin  | View order detail |
+
+### Basket Service
+
+| Endpoint                   | Method  | Role        | Description       |
+| :------------------------- | :-----: | :---------- | :---------------- |
+| `/api/v1/basket`           |  GET    | User        | Get current cart  |
+| `/api/v1/basket`           |  POST   | User        | Update/Add items  |
+| `/api/v1/basket`           |  DELETE | User        | Clear cart        |
 
 ## 6) Threat Model & Mitigations
 
